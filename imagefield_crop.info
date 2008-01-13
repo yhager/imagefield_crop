@@ -1,0 +1,5 @@
+; $Id$
+name= Image crop
+description = Add cropping ability to images using javascript
+dependencies = imagefield jquery_interface
+package = CCK
