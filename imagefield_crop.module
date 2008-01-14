@@ -10,31 +10,13 @@
 /**
  * TODO:
  *
- * o) On editing an existing image, set the default crop values to include the whole image [DONE]
- * o) Need to scale the image to match available width/height                              [DONE]
- *   o) Add a definition of final resolution                                               [DONE]
- *   o) Add a definition of crop area resolution                                           [DONE]
- * o) Upgrade to latest imagefield                                           [WORKS WITH 1.2-rc1]
- * o) On edit node, after preview shows an empty grey box                                  [DONE]
- * o) Test without 'always show cropping area'                                               [OK]
- * o) Enforce final size of the image according to widget resolution and cropped box       [DONE]
  * o) After changing crop see the old cropped image on preview                          [Same with imagefield]
- * o) What about the delete checkbox?                                                      [DONE]
  * o) Make the resizing box a little faster (ease on JS code)                           [NOT NOW]
- * o) Edit existing node, cannot upload new image                                          [DONE]
  * o) Experiencing some segmentation faults (WSOD)                                         [Probably xdebug related]
- * o) Not using GD, but imagemagick                                                        [TEST]
- * o) when creating a new node, upload one file, then another, can't crop                  [DONE]
  * o) Test with imagefield-2.0                                              [edit existing node loses the image]
  * o) NEW NODE: Uploading a file with existing filename shows the cropped image            [??]
- * o) Editing an existing image and cropping again loses the image                         [DONE]
  * o) Sometimes we see old file (upload file with exising filename into crop box of
  *    existing node. Probably a problem with 'file_create_path'                            [??]
- * o) How to scale without distroting the image?                                           [Force ratio]
- * o) Do we scale up?                                                                      [YES]
- * o) Do we want to use $_SESSION['imagefield'] and save some code?                        [YES]
- * o) REFACTOR the code that is duplicated for 'always show cropping area'                 [DONE]
- * o) After submitting a cropped image with existing name, the old image is shown          [Need to click 'refresh']
  */
 
 function imagefield_crop_menu($may_cache) {
