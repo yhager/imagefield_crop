@@ -251,7 +251,13 @@ function _imagefield_crop_widget_prepare_form_values(&$node, $field, &$node_fiel
           //$file['crop'] = $_POST[$fieldname][$delta]['crop'];
         }
       }
-      $node_field[] = $file;
+      if (!isset($file['filepath'])) {
+        // only crop info on the session - crop existing file
+        $node_field[$delta]['crop'] = $file['crop'];
+      }
+      else {
+        $node_field[] = $file;
+      }
     }
   }
   else if (is_array($_POST[$fieldname])) {
