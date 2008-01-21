@@ -187,6 +187,10 @@ function imagefield_crop_widget($op, &$node, $field, &$node_field) {
             form_set_error(NULL, 'Could not copy cropped file');
           }
           file_delete($file['crop']['filepath']);
+          //flush the imagecache presets
+          if (module_exists('imagecache')) {
+            imagecache_image_flush($file['filepath']);
+          }        
         }
         file_delete($file['filepath'] .'.unscaled');
       }
