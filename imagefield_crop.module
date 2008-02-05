@@ -212,7 +212,8 @@ function _imagefield_crop_widget_prepare_form_values(&$node, $field, &$node_fiel
     $file = (array)$file;
     if (strpos($file['filemime'], 'image') !== FALSE) {
       if ($field['widget']['use_unscaled']) {
-        file_copy($unscaled = $file['filepath'], $file['filepath'] .'.unscaled', FILE_EXISTS_REPLACE);
+        $unscaled = $file['filepath'];
+        file_copy($unscaled, $file['filepath'] .'.unscaled', FILE_EXISTS_REPLACE);
       }
       $file = _imagefield_scale_image($file, $field['widget']['croparea']);
       
