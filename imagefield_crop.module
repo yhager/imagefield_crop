@@ -336,8 +336,11 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
   jquery_interface_add();
   if ($field['widget']['enforce_ratio']) {
     list($w, $h) = explode('x', $field['widget']['resolution']);
-    drupal_add_js('Drupal.imagefield_crop = { ratio:'. $h/$w .'}', 'inline');
+    $ratio = $h/$w;
+  } else {
+    $ratio = 0;
   }
+  drupal_add_js('Drupal.imagefield_crop = { ratio:'. $ratio .'}', 'inline');
   drupal_add_js($module_path .'/imagefield_crop.js'); // REFACTOR: rename to imagefield_crop.js
   
   $form = array(); 
