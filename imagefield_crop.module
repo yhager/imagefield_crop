@@ -346,7 +346,7 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
   $form = array(); 
   $form[$fieldname] = array(
     '#type' => 'fieldset',
-    '#title' => t($field['widget']['label']),
+    '#title' => $field['widget']['label'],
     '#weight' => $field['widget']['weight'],
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
