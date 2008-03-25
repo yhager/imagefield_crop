@@ -10,6 +10,7 @@ $(document).ready(function(){
     var containerpos;
     var resizeT;
     var dragT;
+    var changed = false;
     if ($("#image-crop-container").size()) {
         containerpos = findPos($("#image-crop-container").get(0));
     }
@@ -62,6 +63,10 @@ $(document).ready(function(){
 			onDrag: function(x, y)
 			{
                 clearTimeout(dragT);
+                if (!changed) {
+                    changed = true;
+                    $(".edit-image-crop-changed").val(1);
+                }
 				this.style.backgroundPosition = ((-1)*(x - containerpos.x)) + 'px ' + ((-1)*(y - containerpos.y)) + 'px';
                 xx = x-containerpos.x;
                 yy = y-containerpos.y;
@@ -79,6 +84,10 @@ $(document).ready(function(){
 			},
 			onResize : function(size, position) {
                 clearTimeout(resizeT);
+                if (!changed) {
+                    changed = true;
+                    $(".edit-image-crop-changed").val(1);
+                }
 				this.style.backgroundPosition = ((-1)*(position.left - containerpos.x)) + 'px ' + ((-1)*(position.top - containerpos.y)) + 'px';
                 x = position.left-containerpos.x;
                 y = position.top-containerpos.y;

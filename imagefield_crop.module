@@ -261,7 +261,7 @@ function _imagefield_crop_widget_prepare_form_values(&$node, $field, &$node_fiel
     foreach ($_SESSION['imagefield'][$fieldname] as $delta => $file) {
       if (isset($_POST[$fieldname][$delta]['crop'])) {
         // we have a file in the session, but crop attributes on $_POST. Combine them
-        foreach (array('x', 'y', 'width', 'height') as $att) {
+        foreach (array('x', 'y', 'width', 'height', 'changed') as $att) {
           $file['crop'][$att] = $_POST[$fieldname][$delta]['crop'][$att];
           //$file['crop'] = $_POST[$fieldname][$delta]['crop'];
         }
@@ -293,7 +293,7 @@ function _imagefield_crop_widget_prepare_form_values(&$node, $field, &$node_fiel
    * Here we should crop the image, if crop values are given
    */
   foreach ($node_field as $delta => $file) {
-    if ($file['crop']['x'] != '') {
+    if ($file['crop']['changed']) {
       /* crop is requested */
       
       /* REFACTOR: wild try - this might actually work */
@@ -348,7 +348,7 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
 
   $module_path = drupal_get_path('module', 'imagefield_crop');
-  drupal_add_css($module_path .'/imagefield_crop.css'); // REFACTOR: rename to imagefield_crop.css
+  drupal_add_css($module_path .'/imagefield_crop.css');
 
   jquery_interface_add();
   if ($field['widget']['enforce_ratio']) {
@@ -358,7 +358,7 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
     $ratio = 0;
   }
   drupal_add_js('Drupal.imagefield_crop = { ratio:'. $ratio .'}', 'inline');
-  drupal_add_js($module_path .'/imagefield_crop.js'); // REFACTOR: rename to imagefield_crop.js
+  drupal_add_js($module_path .'/imagefield_crop.js'); 
   
   $form = array(); 
   $form[$fieldname] = array(
@@ -397,6 +397,7 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
       'y'   => array('weight' => 6, 'default' => 0),
       'width'  => array('weight' => 7, 'default' => $w ? $w : 50),
       'height' => array('weight' => 8, 'default' => $h ? $h : 50),
+      'changed' => array('weight' => 0, 'default' => 0),
     );
     
 //    drupal_set_message('node_field is <pre>'. print_r($node_field, TRUE)  .'</pre>');
@@ -426,6 +427,9 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
             else {
               $width = $height*$ratio;
             }
+            // if the enforced ratio is different, force crop
+            $crop_attrs['changed']['default'] = ($ratio != $image_ratio);
+
           }
           $crop_attrs['width']['default'] = $width;
           $crop_attrs['height']['default'] = $height;
@@ -552,7 +556,6 @@ function _imagefield_crop_verify_gd() {
 }
 
 function _imagefield_crop_resize($src, $crop = NULL, $resize = 0, $dst = NULL) {
-
   if (!is_file($src)) {
     return FALSE;
   }
