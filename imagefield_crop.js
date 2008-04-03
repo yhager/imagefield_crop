@@ -1,4 +1,4 @@
-/* $Id */
+/* $Id$ */
 function imagefieldCropSetDimensions(x, y, w, h) {
     $(".edit-image-crop-x").val(x);
     $(".edit-image-crop-y").val(y);
