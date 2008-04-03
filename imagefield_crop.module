@@ -81,7 +81,7 @@ function imagefield_crop_widget_settings($op, $widget) {
         '#options' => array(
           1 => t('None.'),
           2 => t('Collapsible, expanded by default.'),
-          /* 3 => t('Collapsible, collapsed by default.') see http://drupal.org/node/235755 */
+          3 => t('Collapsible, collapsed by default.'),
         ),
         '#default_value' => isset($widget['collapsible']) ? $widget['collapsible'] : 2,
       );

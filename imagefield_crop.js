@@ -6,7 +6,7 @@ function imagefieldCropSetDimensions(x, y, w, h) {
     if (h) $(".edit-image-crop-height").val(h);
 }
 
-$(document).ready(function(){
+function imagefieldCropInit() {
     var containerpos;
     var resizeT;
     var dragT;
@@ -97,6 +97,31 @@ $(document).ready(function(){
 			}
 		}
 	);
+}
+
+var imageFieldCropInterval;
+function imageFieldCropGo() {
+    if ($("#image-crop-container").is(':visible')) {
+        clearInterval(imageFieldCropInterval);
+        imagefieldCropInit();
+    }
+}
+
+function imageFieldCropBind() {
+    $('fieldset.collapsible > legend a').click(function(event) {
+        var $target = $(event.target);
+        if ($target.parents('fieldset').find('#image-crop-container').length > 0) {
+            imageFieldCropInterval = setInterval('imageFieldCropGo()', 300);
+        }
+    });
+}
+
+$(document).ready(function(){
+    imageFieldCropGo();
+    // We have to bind using a timeout, since the object is created after page load
+    // Do we need setInterval here instead?
+    setTimeout('imageFieldCropBind()', 200);
 });
+
 
 
