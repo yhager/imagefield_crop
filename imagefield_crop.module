@@ -695,11 +695,10 @@ function theme_imagefield_crop_crop_image($file = NULL, $alt = '', $title = '', 
     if (!$getsize || (is_file($file['filepath']) && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath'])))) {
       //$attributes = drupal_attributes($attributes);
 
-      $path = $file['fid'] == 'upload' ? $file['preview'] : $file['filepath'];
       $alt = empty($alt) ? $file['alt'] : $alt;
       $title = empty($title) ? $file['title'] : $title;
       
-      $url = file_create_url($path);
+      $url = $file['fid'] == 'upload' ? url($file['preview']) : file_create_url($file['filepath']);
 
       $output .= '
 <div id="image-crop-container"                                             
