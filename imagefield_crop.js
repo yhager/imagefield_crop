@@ -1,127 +1,48 @@
 /* $Id$ */
-function imagefieldCropSetDimensions(x, y, w, h) {
-    $(".edit-image-crop-x").val(x);
-    $(".edit-image-crop-y").val(y);
-    if (w) $(".edit-image-crop-width").val(w);
-    if (h) $(".edit-image-crop-height").val(h);
-}
 
-function imagefieldCropInit() {
-    var containerpos;
-    var resizeT;
-    var dragT;
-    var changed = false;
-    if ($("#image-crop-container").size()) {
-        containerpos = findPos($("#image-crop-container").get(0));
-    }
-    else {
-        containerpos = {x:0, y:0};
-    }
+Drupal.behaviors.imagefield_crop = function (context) { 
+  $('#cropbox', context).Jcrop({
+    onChange: showPreview, //<== only slows us down
+    onSelect: setCoords,
+    aspectRatio: Drupal.imagefield_crop.ratio,
+    setSelect: getDimensions()
+  });   
 
-	function findPos(obj) {
-		var curleft = obj.offsetLeft || 0;
-		var curtop = obj.offsetTop || 0;
-		while (obj = obj.parent) {
-			curleft += obj.offsetLeft
-			curtop += obj.offsetTop
-		}
-		return {x:curleft,y:curtop};
-	}
+  function setCoords(c) {
+    setDimensions(c.x, c.y, c.w, c.h);
+      // REFACTOR: only show preview if user requested in widget settings
+    //showPreview(c);
+  };
 
-    $('#resizeMe').ready(function() {
-        /* this is needed to set the box initially according to the form values */
-        var obj = $('#resizeMe').get(0);
-        var newpos = {
-            left: parseInt($(".edit-image-crop-x").val()), 
-            top:  parseInt($(".edit-image-crop-y").val())
-        }
-        var newsize = {
-            width:  parseInt($(".edit-image-crop-width").val()), 
-            height: parseInt($(".edit-image-crop-height").val())
-        }
-        if ($('#resizeMe').size()) {
-		    obj.style.backgroundPosition = (-1)*newpos.left + 'px ' + (-1)*newpos.top + 'px';
-            obj.style.left = (newpos.left + containerpos.x) + 'px';
-            obj.style.top  = (newpos.top  + containerpos.y) + 'px';
-            obj.style.width = newsize.width + 'px';
-            obj.style.height  = newsize.height + 'px';
-        }
+  function showPreview(c) {
+   
+    var rx = Drupal.settings.imagefield_crop.preview.width / c.w;
+    var ry = Drupal.settings.imagefield_crop.preview.height / c.h;
+    
+    $('.jcrop-preview', context).css({
+      width: Math.round(rx * Drupal.settings.imagefield_crop.preview.orig_width) + 'px',
+      height: Math.round(ry * Drupal.settings.imagefield_crop.preview.orig_height) + 'px',
+      marginLeft: '-' + Math.round(rx * c.x) + 'px',
+      marginTop: '-' + Math.round(ry * c.y) + 'px'
     });
+      
+  };
+  // get select box dimensions from the form
+  function getDimensions() {
+    x =  parseInt($(".edit-image-crop-x", context).val()); 
+    y =  parseInt($(".edit-image-crop-y", context).val());
+    w =  parseInt($(".edit-image-crop-width", context).val());
+    h =  parseInt($(".edit-image-crop-height", context).val());
+    return [x, y, x+w, y+h];
+  };
 
-	$('#resizeMe').Resizable(
-		{
-			minWidth: 20,
-			minHeight: 20,
-			maxWidth: 1 + $('#resizeMe').parents('.imagefield-crop-wrapper').width(),
-			maxHeight: 1 + $('#resizeMe').parents('.imagefield-crop-wrapper').height(),
-			minTop: 1,
-			minLeft: 1,
-            maxRight: $('#resizeMe').parents('.imagefield-crop-wrapper').width(),
-			maxBottom: $('#resizeMe').parents('.imagefield-crop-wrapper').height(),
-			dragHandle: true,
-            ratio: Drupal.imagefield_crop.ratio,
-			onDrag: function(x, y)
-			{
-                clearTimeout(dragT);
-                if (!changed) {
-                    changed = true;
-                    $(".edit-image-crop-changed").val(1);
-                }
-				this.style.backgroundPosition = ((-1)*(x - containerpos.x)) + 'px ' + ((-1)*(y - containerpos.y)) + 'px';
-                xx = x-containerpos.x;
-                yy = y-containerpos.y;
-                dragT = setTimeout('imagefieldCropSetDimensions (xx, yy)', 200);
-			},
-			handlers: {
-				se: '#resizeSE',
-				e: '#resizeE',
-				ne: '#resizeNE',
-				n: '#resizeN',
-				nw: '#resizeNW',
-				w: '#resizeW',
-				sw: '#resizeSW',
-				s: '#resizeS'
-			},
-			onResize : function(size, position) {
-                clearTimeout(resizeT);
-                if (!changed) {
-                    changed = true;
-                    $(".edit-image-crop-changed").val(1);
-                }
-				this.style.backgroundPosition = ((-1)*(position.left - containerpos.x)) + 'px ' + ((-1)*(position.top - containerpos.y)) + 'px';
-                x = position.left-containerpos.x;
-                y = position.top-containerpos.y;
-                w = size.width;
-                h = size.height;
-                resizeT = setTimeout('imagefieldCropSetDimensions (x, y, w, h)', 200);
-			}
-		}
-	);
-}
-
-var imageFieldCropInterval;
-function imageFieldCropGo() {
-    if ($("#image-crop-container").is(':visible')) {
-        clearInterval(imageFieldCropInterval);
-        imagefieldCropInit();
-    }
-}
-
-function imageFieldCropBind() {
-    $('fieldset.collapsible > legend a').click(function(event) {
-        var $target = $(event.target);
-        if ($target.parents('fieldset').find('#image-crop-container').length > 0) {
-            imageFieldCropInterval = setInterval('imageFieldCropGo()', 300);
-        }
-    });
-}
-
-$(document).ready(function(){
-    imageFieldCropGo();
-    // We have to bind using a timeout, since the object is created after page load
-    // Do we need setInterval here instead?
-    setTimeout('imageFieldCropBind()', 200);
-});
-
+  function setDimensions(x, y, w, h) {
+    $(".edit-image-crop-x", context).val(x);
+    $(".edit-image-crop-y", context).val(y);
+    if (w) $(".edit-image-crop-width", context).val(w);
+    if (h) $(".edit-image-crop-height", context).val(h);
+    $(".edit-image-crop-changed", context).val(1);
+  };
+};
 
 
