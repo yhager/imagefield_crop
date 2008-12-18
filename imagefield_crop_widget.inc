@@ -109,8 +109,6 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
 //  dpm(__FUNCTION__ . '(' . var_export($args, 1) . ');');
 //  dpm('__we are processed, display cropping interface__');
 
-  xdebug_break();
-  
   $file = $element['#value'];
 //  dpm(var_export($file,1));
   $field = content_fields($element['#field_name'], $element['#type_name']);
@@ -223,7 +221,6 @@ function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
   if ($edit) {
 //    dpm('__we are posted, do cropping__');
     //dvr($edit);
-  xdebug_break();
     $file = field_file_load($edit['fid']);
     $field = content_fields($element['#field_name'], $element['#type_name']);
     
@@ -254,7 +251,6 @@ function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $at
 
 
 function theme_imagefield_crop_preview($file, $resolution = '200x150') {
-  xdebug_break();
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
     return '<!-- file not found: '. $file['filepath'] .' -->';
