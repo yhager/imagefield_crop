@@ -276,7 +276,7 @@ function theme_imagefield_crop_preview($file, $resolution = '200x150') {
     drupal_add_js($settings, 'setting');
     // REFACTOR: Make the preview box size the same as the resulting image (currently: 100x100)
     return '<div class="jcrop-preview-wrapper" style="width:'. $settings['imagefield_crop']['preview']['width'] .'px;height:'. $settings['imagefield_crop']['preview']['height'] .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
-      check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" />';
+      check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" /></div>';
   }
   return '<!-- could not get imagesize, possibly corrupt or non image. '. $file['filepath'] .' -->';
 
