@@ -25,36 +25,34 @@ function imagefield_crop_widget_widget_settings_form($widget) {
     '#size' => 15, 
     '#maxlength' => 10, 
     '#description' => 
-    t('The output resolution of the cropped image, expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 not to rescale after cropping.'),
+    t('The output resolution of the cropped image, expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 not to rescale after cropping. Note: output resolution must be defined in order to present a dynamic preview.'),
     '#element_validate' => array('_imagefield_crop_widget_settings_resolution_validate'),
   );
   $form['enforce_ratio'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enforce box crop box ratio'),
     '#default_value' => isset($widget['enforce_ratio']) ? $widget['enforce_ratio'] : 1,
-    '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked, final images may be distorted'),
+    '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted'),
+    '#element_validate' => array('_imagefield_crop_widget_settings_enforce_ratio_validate'),
   );
+
   $form['croparea'] = array(
     '#type' => 'textfield',
     '#title' => t('The resolution of the cropping area'),
     '#default_value' => isset($widget['croparea']) ? $widget['croparea'] : '500x500',
-    '#size' => 15, 
-    '#maxlength' => 10, 
-    '#description' => t('The resolution of the area used for the cropping of the image. Image will be scaled down to this size before cropping. Use WIDTHxHEIGHT format'),
+    '#size' => 15,
+    '#maxlength' => 10,
+    '#description' => t('The resolution of the area used for the cropping of the image. Image will displayed at this resolution for cropping. Use WIDTHxHEIGHT format, zero values are permitted, e.g. 500x0 will limit crop box to 500 pixels width.'),
     '#element_validate' => array('_imagefield_crop_widget_settings_croparea_validate'),
   );
+  
   $form['always_show'] = array( // REFACTOR: give a better name
     '#type' => 'checkbox',
     '#title' => t('Always show the cropping area'),
     '#default_value' => isset($widget['always_show']) ? $widget['always_show'] : 0,
     '#description' => t('Check this to show the cropping area even before the image is uploaded'),
   );
-  $form['use_unscaled'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Use original (unscaled) image for cropping'),
-    '#default_value' => isset($widget['use_unscaled']) ? $widget['use_unscaled'] : 1,
-    '#description' => t('[NOT IMPLEMENTED] For better quality, use the original image for cropping, and not the one scaled for viewing'),
-  );
+
   return $form;
 }
 
@@ -67,20 +65,30 @@ function _imagefield_crop_widget_settings_resolution_validate($element, &$form_s
   }
 }
 
+function _imagefield_crop_widget_settings_enforce_ratio_validate($element, &$form_state) {
+  if ($form_state['values']['resolution'] && !$form_state['values']['enforce_ratio']) {
+    drupal_set_message('Output resolution is defined, but not enforced. Final images might be distroted');
+  }
+}
+
 function _imagefield_crop_widget_settings_croparea_validate($element,&$form_state) {
-  list($cw, $ch) = explode('x', $form_state['values']['croparea']);
-  if (!is_numeric($cw) || intval($cw) != $cw || $cw <= 0 ||
-      !is_numeric($ch) || intval($ch) != $ch || $ch <= 0) {
-    form_error($element, t('Crop area resolution must be defined as WIDTHxHEIGHT'));
+  if ($form_state['values']['croparea']) {
+    list($cw, $ch) = explode('x', $form_state['values']['croparea']);
+    if (!is_numeric($cw) || intval($cw) != $cw || $cw < 0 ||
+        !is_numeric($ch) || intval($ch) != $ch || $ch < 0) {
+      form_error($element, t('Crop area resolution must be defined as WIDTHxHEIGHT'));
+    }
   }
 }
 
 function imagefield_crop_widget_widget_settings_validate($widget) {
   _imagefield_crop_verify_gd();
+  // for some reason, filefield expects an array here. Make it happy. #357945
+  return array();
 }
 
 function imagefield_crop_widget_widget_settings_save($widget) {
-  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea', 'always_show', 'use_unscaled');
+  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea', 'always_show'/*, 'use_unscaled'*/);
   return array_merge($settings, imagefield_widget_widget_settings_save($widget));
 }
 
@@ -95,39 +103,34 @@ function theme_imagefield_crop_widget(&$element) {
 
 function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $form) {
 
-  //dpm(__FUNCTION__ . "[{$element['#type']}]" . ($edit ? ' POSTED' : ' unposted'));
-  if ($edit) {
-//    dpm(var_export($edit, 1));
-  }
-  else {
-//    dpm(var_export($element, 1));
-//    dpm(var_export($form_state, 1));
-//    dpm(var_export($form, 1));
-  }
-    
-//  $args = func_get_args();
-//  dpm(__FUNCTION__ . '(' . var_export($args, 1) . ');');
-//  dpm('__we are processed, display cropping interface__');
-
   $file = $element['#value'];
-//  dpm(var_export($file,1));
-  $field = content_fields($element['#field_name'], $element['#type_name']);
 
-  // widget is at $field['widget']
+  $field = content_fields($element['#field_name'], $element['#type_name']);
 
   $module_path = drupal_get_path('module', 'imagefield_crop');
 
-  // REFACTOR: add jquery_ui here
-  //jquery_ui_add('ui.resizable');
   drupal_add_js($module_path . '/Jcrop/js/jquery.Jcrop.js');
   drupal_add_css($module_path . '/Jcrop/css/jquery.Jcrop.css');
 
-  list($w, $h) = explode('x', $field['widget']['resolution']);
+  if ($field['widget']['resolution']) {
+    list($w, $h) = explode('x', $field['widget']['resolution']);
 
-  // ratio is zero when not enforced
-  $ratio = $field['widget']['enforce_ratio'] * $w/$h;
+    // ratio is zero when not enforced
+    $ratio = $field['widget']['enforce_ratio'] * $w/$h;
+  }
+  else {
+    // no output resolution requested
+    $ratio = 0;
+  }
 
-  drupal_add_js("Drupal.imagefield_crop = { ratio : $ratio }", 'inline');
+  if ($field['widget']['croparea']) {
+    list($bwidth, $bheight) = explode('x', $field['widget']['croparea']);
+  }
+  else {
+    $bwidth = $bheight = 0;
+  }
+  // for some reason, drupal_add_js(.., 'setting') does not work as expected
+  drupal_add_js("Drupal.imagefield_crop = { ratio : $ratio, box_width: $bwidth, box_height: $bheight }", 'inline');
   drupal_add_js($module_path . '/imagefield_crop.js'); 
 
   $element['#collapsible'] = ($field['widget']['collapsible'] != 1);
@@ -168,7 +171,7 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
     $crop_display['filepath'] = imagefield_crop_file_admin_crop_display_path($file);
     $element['data']['cropbox'] = array(
       '#type' => 'markup',
-      '#value' => theme('imagefield_crop_cropbox', $crop_display, $crop_display['alt'], $crop_display['title'], NULL, TRUE),
+      '#value' => theme('imagefield_crop_cropbox', $crop_display, $crop_display['alt'], $crop_display['title'], NULL, FALSE),
     );
     
     $element['data']['crop'] = array(
@@ -195,7 +198,7 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
       // posted forms.
       $element['data']['crop-preview'] = array(
         '#type' => 'markup',
-        '#value' => theme('imagefield_crop_preview', $crop_display, $field['widget']['resolution']),
+        '#value' => theme('imagefield_crop_dynamic_preview', $crop_display, $field['widget']['resolution']),
       );
     }    
   }
@@ -217,16 +220,14 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
 }
 
 function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
-//  dpm(__FUNCTION__ . "[{$element['#type']}]" . ($edit ? ' POSTED' : ' unposted'));
   if ($edit) {
-//    dpm('__we are posted, do cropping__');
-    //dvr($edit);
     $file = field_file_load($edit['fid']);
     $field = content_fields($element['#field_name'], $element['#type_name']);
     
     $crop = $edit['data']['crop'];
     if ($crop['changed']) {
-//      dpm('calling crop resize...');
+      // save crop time, for preview
+      variable_set('imagefield_crop_query_string', REQUEST_TIME);
       _imagefield_crop_resize(imagefield_crop_file_admin_original_path($file),
                               $crop,
                               $field['widget']['resolution'],
@@ -238,19 +239,18 @@ function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
 }
 
 function imagefield_crop_widget_widget_validate($element) {
-//  dpm(__FUNCTION__ . "[{$element['#type']}]");
   // Check if crop values are not empty
 }
 
 
 function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
   // REFACTOR: consider multiple images
-  $attributes = (array)$attributes + array('id' => 'cropbox');
+  $attributes = array_merge((array)$attributes + array('id' => 'cropbox'));
   return theme('imagefield_image', $file, $alt, $title, $attributes, $getsize);
 }
 
 
-function theme_imagefield_crop_preview($file, $resolution = '200x150') {
+function theme_imagefield_crop_dynamic_preview($file, $resolution) {
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
     return '<!-- file not found: '. $file['filepath'] .' -->';
@@ -274,7 +274,6 @@ function theme_imagefield_crop_preview($file, $resolution = '200x150') {
     );
     // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
     drupal_add_js($settings, 'setting');
-    // REFACTOR: Make the preview box size the same as the resulting image (currently: 100x100)
     return '<div class="jcrop-preview-wrapper" style="width:'. $settings['imagefield_crop']['preview']['width'] .'px;height:'. $settings['imagefield_crop']['preview']['height'] .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
       check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" /></div>';
   }
@@ -284,8 +283,6 @@ function theme_imagefield_crop_preview($file, $resolution = '200x150') {
 }
 
 function _imagefield_crop_resize($src, $crop = NULL, $resize = 0, $dst = NULL) {
-  $args = func_get_args();
-//  dpm(__FUNCTION__ . '(' . var_export($args, 1) . ');');
   if (!is_file($src)) {
     return FALSE;
   }
@@ -354,6 +351,7 @@ function _imagefield_crop_resize($src, $crop = NULL, $resize = 0, $dst = NULL) {
    * Note that if it is not required, the rectangles are outside of the
    * image boundaries anyway.
    * REFACTOR: verify which is better in performance - with conditionals or w/o
+   * REFACTOR: This was a feature in the original implementation, but probably not needed anymore
    */
   /* bottom */
   imageFilledRectangle($res, 0, $ratio_h*($info['height']-$src_y),

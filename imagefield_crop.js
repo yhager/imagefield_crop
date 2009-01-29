@@ -1,17 +1,30 @@
 /* $Id$ */
 
 Drupal.behaviors.imagefield_crop = function (context) { 
-  $('#cropbox', context).Jcrop({
-    onChange: showPreview, //<== only slows us down
+  //$('#cropbox', context).Jcrop({
+  var api = $.Jcrop($('#cropbox', context), {
+    onChange: showPreview, 
     onSelect: setCoords,
     aspectRatio: Drupal.imagefield_crop.ratio,
-    setSelect: getDimensions()
+    boxWidth: Drupal.imagefield_crop.box_width,
+    boxHeight: Drupal.imagefield_crop.box_heignt
+//    setSelect: getDimensions()
   });   
+  var dim = getDimensions();
+  api.setSelect(dim);
+
+  // if images was scaled for display, scale the crop box. This should be given by Jcrop in future versions.
+  var select = api.tellSelect();
+  var scaled = api.tellScaled();
+  var xscale = scaled.x/select.x;
+  var yscale = scaled.y/select.y;
+  if (xscale != 1 || yscale != 1) {
+    api.animateTo([dim[0]*xscale, dim[1]*yscale, dim[2]*xscale, dim[3]*yscale]);
+  }
+  
 
   function setCoords(c) {
     setDimensions(c.x, c.y, c.w, c.h);
-      // REFACTOR: only show preview if user requested in widget settings
-    //showPreview(c);
   };
 
   function showPreview(c) {
@@ -27,6 +40,7 @@ Drupal.behaviors.imagefield_crop = function (context) {
     });
       
   };
+
   // get select box dimensions from the form
   function getDimensions() {
     x =  parseInt($(".edit-image-crop-x", context).val()); 
