@@ -1,6 +1,10 @@
 /* $Id$ */
 
 Drupal.behaviors.imagefield_crop = function (context) { 
+  if ($('#cropbox', context).length == 0) {
+    // no cropbox, probably an image upload (http://drupal.org/node/366296)
+    return;
+  }
   //$('#cropbox', context).Jcrop({
   var api = $.Jcrop($('#cropbox', context), {
     onChange: showPreview, 
