@@ -46,13 +46,6 @@ function imagefield_crop_widget_widget_settings_form($widget) {
     '#element_validate' => array('_imagefield_crop_widget_settings_croparea_validate'),
   );
   
-  $form['always_show'] = array( // REFACTOR: give a better name
-    '#type' => 'checkbox',
-    '#title' => t('Always show the cropping area'),
-    '#default_value' => isset($widget['always_show']) ? $widget['always_show'] : 0,
-    '#description' => t('Check this to show the cropping area even before the image is uploaded'),
-  );
-
   return $form;
 }
 
@@ -88,7 +81,7 @@ function imagefield_crop_widget_widget_settings_validate($widget) {
 }
 
 function imagefield_crop_widget_widget_settings_save($widget) {
-  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea', 'always_show'/*, 'use_unscaled'*/);
+  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea');
   return array_merge($settings, imagefield_widget_widget_settings_save($widget));
 }
 
@@ -96,21 +89,27 @@ function imagefield_crop_widget_widget_settings_save($widget) {
  * FormAPI theme function. Theme the output of an image field.
  */
 function theme_imagefield_crop_widget(&$element) {
-//  dpm(__FUNCTION__ . "[{$element['#type']}]");
-  
   return theme('form_element', $element, $element['#children']);
 }
 
 function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $form) {
+  static $added_js;
+
+  $module_path = drupal_get_path('module', 'imagefield_crop');
+  drupal_add_js($module_path . '/Jcrop/js/jquery.Jcrop.js');
+  // We must define Drupal.behaviors for ahah to work, even if there is no file
+  drupal_add_js($module_path . '/imagefield_crop.js');
+  drupal_add_css($module_path . '/Jcrop/css/jquery.Jcrop.css');
 
   $file = $element['#value'];
 
   $field = content_fields($element['#field_name'], $element['#type_name']);
 
-  $module_path = drupal_get_path('module', 'imagefield_crop');
-
-  drupal_add_js($module_path . '/Jcrop/js/jquery.Jcrop.js');
-  drupal_add_css($module_path . '/Jcrop/css/jquery.Jcrop.css');
+  // check remove buttons...
+  $remove_name = $element['#field_name'] .'_'. $element['#delta'] .'_remove_btn';
+  if (isset($form_state['clicked_button']) && $form_state['clicked_button']['#name'] == $remove_name) {
+    return $element;
+  }
 
   if ($field['widget']['resolution']) {
     list($w, $h) = explode('x', $field['widget']['resolution']);
@@ -129,93 +128,74 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
   else {
     $bwidth = $bheight = 0;
   }
-  // for some reason, drupal_add_js(.., 'setting') does not work as expected
-  drupal_add_js("Drupal.imagefield_crop = { ratio : $ratio, box_width: $bwidth, box_height: $bheight }", 'inline');
-  drupal_add_js($module_path . '/imagefield_crop.js'); 
-
   $element['#collapsible'] = ($field['widget']['collapsible'] != 1);
   $element['#collapsed'] = ($field['widget']['collapsible'] == 3);
 
-  $crop_attrs = array(
-    'x'   => array('default' => 0),
-    'y'   => array('default' => 0),
-    'width'  => array('default' => $w ? $w : 50),
-    'height' => array('default' => $h ? $h : 50),
-    'changed' => array('default' => 0),
+  $defaults = array(
+    'x'       => 0,
+    'y'       => 0,
+    'width'   => $w ? $w : 50,
+    'height'  => $h ? $h : 50,
+  'changed' => 0,
   );
 
-  if (!empty($file)) {
-    //$element['data']['#theme'] = 'imagefield_crop_edit_crop_image_row';
-    //$element['data']['#croparea'] = $field['widget']['croparea'];
+  if (!empty($file) && 
+      is_file($file['filepath']) &&
+      (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
+    
+    if (!$added_js) {
+      // add settings only once (for ahah)
+      $settings = array(
+        'ratio' => $ratio,
+        'box_width' => (integer)$bwidth,
+        'box_height' => (integer)$bheight,
+      );
+      drupal_add_js(array('imagefield_crop' => $settings), 'setting');
+      $added_js = TRUE;
+    }
       
-    if (is_file($file['filepath']) && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
-      if ($field['widget']['enforce_ratio']) {
-        //list($fw, $fh) = explode('x', $field['widget']['resolution']);
-        //$ratio = $fw/$fh;
-        $image_ratio = $width/$height;
-        if ($ratio > $image_ratio) {
-          $height = $width/$ratio;
-        }
-        else {
-          $width = $height*$ratio;
-        }
-        // if the enforced ratio is different, force crop
-        $crop_attrs['changed']['default'] = ($ratio != $image_ratio);
-        
+    if ($field['widget']['enforce_ratio']) {
+      $image_ratio = $width/$height;
+      if ($ratio > $image_ratio) {
+        $height = $width/$ratio;
       }
-      $crop_attrs['width']['default'] = $width;
-      $crop_attrs['height']['default'] = $height;
+      else {
+        $width = $height*$ratio;
+      }
+      // if the enforced ratio is different, force crop
+      $defaults['changed'] = ($ratio != $image_ratio);
+      
     }
-
-    $crop_display = $file;
-    $crop_display['filepath'] = imagefield_crop_file_admin_crop_display_path($file);
-    $element['data']['cropbox'] = array(
+    $defaults['width'] = $width;
+    $defaults['height'] = $height;
+  }
+  
+  $crop_display = $file;
+  $crop_display['filepath'] = imagefield_crop_file_admin_crop_display_path($file);
+  $element['data']['cropbox'] = array(
+    '#type' => 'markup',
+    '#value' => theme('imagefield_crop_cropbox', $crop_display, $crop_display['alt'], $crop_display['title'], NULL, FALSE),
+  );
+  
+  $element['data']['crop'] = array(
+    '#weight' => -10,
+  );
+  
+  foreach ($defaults as $name => $default) {
+    $element['data']['crop'][$name] = array(
+      '#type' => 'hidden',
+      '#title' => $name,
+      '#attributes' => array('class' => 'edit-image-crop-'. $name),
+      '#value' => $file['data']['crop'][$name] ? $file['data']['crop'][$name] : $default,
+    );
+  }
+  
+  // show dynamic crop preview
+  $element['data']['crop-preview'] = array(
       '#type' => 'markup',
-      '#value' => theme('imagefield_crop_cropbox', $crop_display, $crop_display['alt'], $crop_display['title'], NULL, FALSE),
+      '#value' => theme('imagefield_crop_dynamic_preview', $crop_display, $field['widget']['resolution']),
     );
-    
-    $element['data']['crop'] = array(
-      '#weight' => -10,
-    );
-    
-    foreach ($crop_attrs as $attr => $value) {
-      $element['data']['crop'][$attr] = array(
-        '#type' => 'hidden',
-        '#title' => $attr,
-        '#size' => 4,
-        '#maxlength' => 25,
-        '#weight' => $value['weight'],
-        '#attributes' => array('class' => 'edit-image-crop-'. $attr),
-        '#value' => $file['data']['crop'][$attr] ? $file['data']['crop'][$attr] : $value['default'],
-      );
-    }
-    
-    /**
-     * Show crop preview
-     */
-    if (!$edit) {
-      // show only on non-posted forms. the theme function might add js settings which we do not want on
-      // posted forms.
-      $element['data']['crop-preview'] = array(
-        '#type' => 'markup',
-        '#value' => theme('imagefield_crop_dynamic_preview', $crop_display, $field['widget']['resolution']),
-      );
-    }    
-  }
-  else {
-    if ($field['widget']['always_show']) {
-      // just show croppable area, without any image
-      $element['data'] = array(
-        //'#theme' => 'imagefield_crop_edit_crop_image_row', 
-        //'#croparea' => $field['widget']['croparea'],
-      );
-      $element['data']['cropbox'] = array(
-        '#type' => 'markup',
-        /* REFACTOR: use different theme based on croppable widget settings */
-        '#value' => theme('imagefield_crop_cropbox', NULL, '', '', NULL, FALSE),
-      );
-    }
-  }
+
   return $element;
 }
 
@@ -251,30 +231,34 @@ function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $at
 
 
 function theme_imagefield_crop_dynamic_preview($file, $resolution) {
+  static $added_js;
+  
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
     return '<!-- file not found: '. $file['filepath'] .' -->';
   }
-  list($widget_width, $widget_height) = explode('x', $resolution);
+  list($width, $height) = explode('x', $resolution);
   
   $image_attributes = array();
-  if (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath'])) {
+  if (list($orig_width, $orig_height, $type, $image_attributes) = @getimagesize($file['filepath'])) {
     $alt = $file['alt'] ? $alt : 'jcrop preview';
     $title = $file['title'] ? $title : '';
     $url = file_create_url($file['filepath']);
-    $settings = array(
-      'imagefield_crop' => array(
+    if (!$added_js) {
+      $settings = array(
         'preview' => array(
-          'orig_width' => $width,
-          'orig_height' => $height,
-          'width' => $widget_width,
-          'height' => $widget_height,
+          'orig_width' => $orig_width,
+          'orig_height' => $orig_height,
+          'width' => (integer)$width,
+          'height' => (integer)$height,
         ),
-      ),
-    );
-    // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
-    drupal_add_js($settings, 'setting');
-    return '<div class="jcrop-preview-wrapper" style="width:'. $settings['imagefield_crop']['preview']['width'] .'px;height:'. $settings['imagefield_crop']['preview']['height'] .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
+      );
+      // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
+      drupal_add_js(array('imagefield_crop' => $settings), 'setting');
+      $added_js = TRUE;
+    }
+
+    return '<div class="jcrop-preview-wrapper" style="width:'. $width .'px;height:'. $height .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
       check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" /></div>';
   }
   return '<!-- could not get imagesize, possibly corrupt or non image. '. $file['filepath'] .' -->';
