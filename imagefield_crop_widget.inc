@@ -74,12 +74,6 @@ function _imagefield_crop_widget_settings_croparea_validate($element,&$form_stat
   }
 }
 
-function imagefield_crop_widget_widget_settings_validate($widget) {
-  _imagefield_crop_verify_gd();
-  // for some reason, filefield expects an array here. Make it happy. #357945
-  return array();
-}
-
 function imagefield_crop_widget_widget_settings_save($widget) {
   $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea');
   return array_merge($settings, imagefield_widget_widget_settings_save($widget));
@@ -136,7 +130,7 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
     'y'       => 0,
     'width'   => $w ? $w : 50,
     'height'  => $h ? $h : 50,
-  'changed' => 0,
+    'changed' => 0,
   );
 
   if (!empty($file) && 
@@ -205,12 +199,15 @@ function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
     $field = content_fields($element['#field_name'], $element['#type_name']);
     
     $crop = $edit['data']['crop'];
+    if ($field['widget']['resolution']) {
+      list($scale['width'], $scale['height']) = explode('x', $field['widget']['resolution']);
+    }
     if ($crop['changed']) {
       // save crop time, for preview
       variable_set('imagefield_crop_query_string', REQUEST_TIME);
       _imagefield_crop_resize(imagefield_crop_file_admin_original_path($file),
                               $crop,
-                              $field['widget']['resolution'],
+                              $scale,
                               $file['filepath']);
     }
   }
@@ -266,97 +263,20 @@ function theme_imagefield_crop_dynamic_preview($file, $resolution) {
   
 }
 
-function _imagefield_crop_resize($src, $crop = NULL, $resize = 0, $dst = NULL) {
-  if (!is_file($src)) {
-    return FALSE;
-  }
+function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = '') {
+  $image = module_invoke('imageapi', 'image_open', $src);
 
-/**
- * The drupal image API is not good enough:
- * 1. It enforces file saving between operations
- * 2. In case of lossy compression (jpeg) quality is reduced on every action (http://drupal.org/node/128963)
- *
- * ==> REFACTOR: Use drupal 6 image toolkit functions instead
- */
-  if (!_imagefield_crop_verify_gd()) {
-    return FALSE;
-  }
-  
-  $info = image_get_info($src);
-
-  if (!$info) {
-    return FALSE;
-  }
-
-  // if an unscaled version of the image exists, we should use it for cropping
-  $unscaled = $src .'.unscaled';
-  if (is_file($unscaled)) {
-    $unscaled_info = image_get_info($unscaled);
-    $scale=array();
-    $scale['width'] = $unscaled_info['width']/$info['width'];
-    $scale['height'] = $unscaled_info['height']/$info['height'];
-    if (!empty($crop)) {
-      $crop['x'] *= $scale['width'];
-      $crop['y'] *= $scale['height'];
-      $crop['width'] *= $scale['width'];
-      $crop['height'] *= $scale['height'];
+  if ($image) {
+    if ($crop) {
+      module_invoke('imageapi', 'image_crop', $image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
     }
-    $src = $unscaled;
-    $info = $unscaled_info;
-  }
-  
 
- // find the final image dimensions
-  list($width, $height) = array($info['width'], $info['height']);
-  if ($resize) {
-    list($width, $height) = explode('x', $resize);
-  }
-  elseif (!empty($crop)) {
-    list($width, $height) = array($crop['width'], $crop['height']);
+    if ($scale) {
+      module_invoke('imageapi', 'image_scale', $image, $scale['width'], $scale['height']);
+    }
+
+    $result = module_invoke('imageapi', 'image_close', $image, $dst);
   }
 
-  /* REFACTOR: Don't scale up */
-
-  $im = image_gd_open($src, $info['extension']);
-  $res = imageCreateTrueColor($width, $height);
-  $background = imageColorAllocate($res, 255, 255, 255);
-
-  imageCopyResampled($res, $im,
-                     0, 0,
-                     $src_x = $crop['x'] ? $crop['x'] : 0, $src_y = $crop['y'] ? $crop['y'] : 0,
-                     $width, $height,
-                     $src_w = $crop['width'] ? $crop['width'] : $info['width'],
-                     $src_h = $crop['height'] ? $crop['height'] : $info['height']);
-  $ratio_w = $width/$src_w;
-  $ratio_h = $height/$src_h;
-
-  /**
-   * Fill background around the image if required.
-   * Note that if it is not required, the rectangles are outside of the
-   * image boundaries anyway.
-   * REFACTOR: verify which is better in performance - with conditionals or w/o
-   * REFACTOR: This was a feature in the original implementation, but probably not needed anymore
-   */
-  /* bottom */
-  imageFilledRectangle($res, 0, $ratio_h*($info['height']-$src_y),
-                       $width, $height, $background);
-  /* right */
-  imageFilledRectangle($res, $ratio_w*($info['width']-$src_x), 0,
-                       $width, $height, $background);
-  /* top */
-  if ($src_y<0) {    
-    imageFilledRectangle($res, 0, 0,
-                         $width, $ratio_h*(-1)*$src_y, $background);
-  }
-  /* left */
-  if ($src_x<0) {
-    imageFilledRectangle($res, 0, 0,
-                         $ratio_w*(-1)*$src_x, $height, $background);
-  }
-  
-  $result = image_gd_close($res, empty($dst) ? $src : $dst, $info['extension']);
-  imageDestroy($im);
-  imageDestroy($res);
   return $result;
 }
-

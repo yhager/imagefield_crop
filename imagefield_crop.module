@@ -123,12 +123,3 @@ function theme_imagefield_crop_widget_preview($item = NULL) {
   return '<img src="'. file_create_url($thumb_path) . $query_string . '" />';
 }
 
-function _imagefield_crop_verify_gd() {
-  if (image_get_toolkit() != 'gd') {
-    $toolkits = image_get_available_toolkits();
-    drupal_set_message(t('Image cropping only works with %toolkit. Please select it at !url, or ask your system administrator to do so', array('%toolkit' => $toolkits['gd'], '!url' => l('Image Toolkit selection page', 'admin/settings/image-toolkit'))), 'error');
-    return FALSE;
-  }
-  return TRUE;
-}
-

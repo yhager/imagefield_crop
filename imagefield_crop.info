@@ -2,6 +2,7 @@
 name= Image crop
 description = Add cropping ability to images using javascript
 core = 6.x
-dependencies[] = imagefield 
+dependencies[] = imagefield
+dependencies[] = imageapi
 package = CCK
 

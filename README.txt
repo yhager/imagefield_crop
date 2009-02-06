@@ -20,7 +20,7 @@ within the node.
 
 
 = Prerequisites =
-You will need imagefield enabled in order to use this module.
+You will need imagefield and imageapi enabled in order to use this module.
 
 
 = Installation =
@@ -33,4 +33,3 @@ You will need imagefield enabled in order to use this module.
 == Patch imagefield ==
 In order to see the cropped images without a manual browser refresh, use the
 patch in http://drupal.org/node/353405#comment-1224788. 
-Please vote on this patch to get it onto imagefield module.
