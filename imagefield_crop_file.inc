@@ -15,6 +15,10 @@ function imagefield_crop_file_insert($file) {
 function imagefield_crop_file_update(&$file) {
   // update admin thumbnail
   imagefield_file_insert($file);
+
+  // flush imagecache
+  module_invoke('imagecache', 'image_flush', $file->filepath);
+
   // update timestamp, see http://drupal.org/node/353405
   $file->timestamp = REQUEST_TIME;
   drupal_write_record('files', $file, 'fid');
