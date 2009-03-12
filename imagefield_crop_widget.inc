@@ -6,8 +6,8 @@
 module_load_include('inc','imagefield', 'imagefield_widget');
 
 
-function imagefield_crop_widget_widget_settings_form($widget) {
-  $form = imagefield_widget_widget_settings_form($widget);
+function imagefield_crop_widget_settings_form($widget) {
+  $form = module_invoke('imagefield', 'widget_settings_form', $widget);
   $form['collapsible'] = array(
     '#type' => 'radios',
     '#title' => t('Collapsible behavior'),
@@ -74,9 +74,13 @@ function _imagefield_crop_widget_settings_croparea_validate($element,&$form_stat
   }
 }
 
-function imagefield_crop_widget_widget_settings_save($widget) {
+function imagefield_crop_widget_settings_validate($widget) {
+  module_invoke('imagefield', 'widget_settings_validate', $widget);
+}
+
+function imagefield_crop_widget_settings_save($widget) {
   $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea');
-  return array_merge($settings, imagefield_widget_widget_settings_save($widget));
+  return array_merge($settings, module_invoke('imagefield', 'widget_settings_save', $widget));
 }
 
 /**
@@ -86,7 +90,7 @@ function theme_imagefield_crop_widget(&$element) {
   return theme('form_element', $element, $element['#children']);
 }
 
-function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $form) {
+function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
   static $added_js;
 
   $module_path = drupal_get_path('module', 'imagefield_crop');
@@ -133,21 +137,21 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
     'changed' => 0,
   );
 
+  if (!$added_js) {
+    // Add settings only once (for ahah).
+    $settings = array(
+      'ratio' => $ratio,
+      'box_width' => (integer)$bwidth,
+      'box_height' => (integer)$bheight,
+    );
+    drupal_add_js(array('imagefield_crop' => $settings), 'setting');
+    $added_js = TRUE;
+  }
+
   if (!empty($file) && 
       is_file($file['filepath']) &&
       (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
-    
-    if (!$added_js) {
-      // add settings only once (for ahah)
-      $settings = array(
-        'ratio' => $ratio,
-        'box_width' => (integer)$bwidth,
-        'box_height' => (integer)$bheight,
-      );
-      drupal_add_js(array('imagefield_crop' => $settings), 'setting');
-      $added_js = TRUE;
-    }
-      
+
     if ($field['widget']['enforce_ratio']) {
       $image_ratio = $width/$height;
       if ($ratio > $image_ratio) {
@@ -185,7 +189,7 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
   }
   
   // show dynamic crop preview
-  $element['data']['crop-preview'] = array(
+  $element['preview'] = array(
       '#type' => 'markup',
       '#value' => theme('imagefield_crop_dynamic_preview', $crop_display, $field['widget']['resolution']),
     );
@@ -193,7 +197,7 @@ function imagefield_crop_widget_widget_process($element, $edit, &$form_state, $f
   return $element;
 }
 
-function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
+function imagefield_crop_widget_value($element, $edit = FALSE) {
   if ($edit) {
     $file = field_file_load($edit['fid']);
     $field = content_fields($element['#field_name'], $element['#type_name']);
@@ -212,10 +216,10 @@ function imagefield_crop_widget_widget_value($element, $edit = FALSE) {
     }
   }
 
-  return array();
+  return module_invoke('filefield', 'widget_value', $element, $edit);
 }
 
-function imagefield_crop_widget_widget_validate($element) {
+function imagefield_crop_widget_validate($element) {
   // Check if crop values are not empty
 }
 
@@ -223,13 +227,16 @@ function imagefield_crop_widget_widget_validate($element) {
 function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
   // REFACTOR: consider multiple images
   $attributes = array_merge((array)$attributes + array('id' => 'cropbox'));
-  return theme('imagefield_image', $file, $alt, $title, $attributes, $getsize);
+  $output = theme('imagefield_image', $file, $alt, $title, $attributes, $getsize);
+  $element = array(
+    '#type' => 'element',
+    '#title' => t('Crop area'),
+  );
+  return theme('form_element', $element, $output);
 }
 
 
 function theme_imagefield_crop_dynamic_preview($file, $resolution) {
-  static $added_js;
-  
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
     return '<!-- file not found: '. $file['filepath'] .' -->';
@@ -241,22 +248,18 @@ function theme_imagefield_crop_dynamic_preview($file, $resolution) {
     $alt = $file['alt'] ? $alt : 'jcrop preview';
     $title = $file['title'] ? $title : '';
     $url = file_create_url($file['filepath']);
-    if (!$added_js) {
-      $settings = array(
-        'preview' => array(
-          'orig_width' => $orig_width,
-          'orig_height' => $orig_height,
-          'width' => (integer)$width,
-          'height' => (integer)$height,
-        ),
-      );
-      // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
-      drupal_add_js(array('imagefield_crop' => $settings), 'setting');
-      $added_js = TRUE;
-    }
-
-    return '<div class="jcrop-preview-wrapper" style="width:'. $width .'px;height:'. $height .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
+    $settings = array(
+      'orig_width' => $orig_width,
+      'orig_height' => $orig_height,
+      'width' => (integer)$width,
+      'height' => (integer)$height,
+    );
+    // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
+    $output = '';
+    $output .= '<script type="text/javascript">Drupal.settings.imagefield_crop.preview = '. drupal_to_js($settings) .'</script>';
+    $output .= '<div class="jcrop-preview-wrapper" style="width:'. $width .'px;height:'. $height .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
       check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" /></div>';
+    return $output;
   }
   return '<!-- could not get imagesize, possibly corrupt or non image. '. $file['filepath'] .' -->';
 

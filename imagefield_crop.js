@@ -3,7 +3,7 @@
 Drupal.behaviors.imagefield_crop = function (context) { 
   // wait till 'fadeIn' effect ends (defined in filefield_widget.inc)
   setTimeout(attachJcrop, 700, context);
-  
+
   function attachJcrop(context) {
     if ($('#cropbox', context).length == 0) {
       // no cropbox, probably an image upload (http://drupal.org/node/366296)

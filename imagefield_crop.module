@@ -45,7 +45,14 @@ function imagefield_crop_widget_info() {
  * Delegated to filefield.
  */
 function imagefield_crop_widget_settings($op, $widget) {
-  return imagefield_widget_settings($op, $widget);
+  switch ($op) {
+    case 'form':
+      return imagefield_crop_widget_settings_form($widget);
+    case 'validate':
+      return imagefield_crop_widget_settings_validate($widget);
+    case 'save':
+      return imagefield_crop_widget_settings_save($widget);
+  }
 }
 
 /**
@@ -65,12 +72,9 @@ function imagefield_crop_elements() {
   $elements['imagefield_crop_widget'] =  array(
     // Indicate to FormAPI that this element needs processing and is not simply a render element.
     '#input' => TRUE,
-    // Delegate element processing to filefield. Filefield will include
-    '#process' => array('filefield_widget_process', 'imagefield_widget_widget_process', 'imagefield_crop_widget_widget_process'),
-    // See imagefield_widget[#process] documentation.
-    '#value_callback' => 'filefield_widget_value',
-    // delegate to filefield...
-    '#element_validate' => array('filefield_widget_validate', 'imagefield_widget_validate'),
+    '#process' => array('filefield_widget_process', 'imagefield_widget_process', 'imagefield_crop_widget_process'),
+    '#value_callback' => 'imagefield_crop_widget_value',
+    '#element_validate' => array('filefield_widget_validate', 'imagefield_widget_validate', 'imagefield_crop_widget_validate'),
     '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
   );
   return $elements;
