@@ -170,6 +170,10 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
   
   $crop_display = $file;
   $crop_display['filepath'] = imagefield_crop_file_admin_crop_display_path($file);
+  if (!file_exists($crop_display['filepath'])) {
+    // crop_display_path might not exist if we were imagefield_crop is added to existing images
+    $crop_display['filepath'] = $file['filepath'];
+  }
   $element['data']['cropbox'] = array(
     '#type' => 'markup',
     '#value' => theme('imagefield_crop_cropbox', $crop_display, $crop_display['alt'], $crop_display['title'], NULL, FALSE),
