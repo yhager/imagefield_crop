@@ -97,6 +97,7 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
   drupal_add_js($module_path . '/Jcrop/js/jquery.Jcrop.js');
   // We must define Drupal.behaviors for ahah to work, even if there is no file
   drupal_add_js($module_path . '/imagefield_crop.js');
+  drupal_add_css($module_path . '/imagefield_crop.css');
   drupal_add_css($module_path . '/Jcrop/css/jquery.Jcrop.css');
 
   $file = $element['#value'];
