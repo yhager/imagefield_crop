@@ -6,7 +6,9 @@
  */
 function imagefield_crop_file_insert($file) {
   // we copy the file as is, for quality cropping.
-  if (imagefield_file_is_image($file)) { 
+  if ((isset($file->field['widget']) &&
+       $file->field['widget']['module'] == 'imagefield_crop') &&
+      imagefield_file_is_image($file)) {
     $newfile = drupal_clone($file);
     file_copy($newfile->filepath, imagefield_crop_file_admin_crop_display_path($newfile));
   }
