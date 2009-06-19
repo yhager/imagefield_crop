@@ -18,20 +18,7 @@ Drupal.behaviors.imagefield_crop = function (context) {
       //    setSelect: getDimensions()
     });   
     var dim = getDimensions();
-    api.setSelect(dim);
-    
-    // if images was scaled for display, scale the crop box. This should be given by Jcrop in future versions.
-    var select = api.tellSelect();
-    var scaled = api.tellScaled();
-    var xdelta = select.x2-select.x;
-    var ydelta = select.y2-select.y;
-    if ((select.x2-select.x > 0) && (select.y2-select.y > 0)) {
-      var xscale = (scaled.x2-scaled.x)/(select.x2-select.x);
-      var yscale = (scaled.y2-scaled.y)/(select.y2-select.y);
-      if (xscale != 1 || yscale != 1) {
-        api.animateTo([dim[0]*xscale, dim[1]*yscale, dim[2]*xscale, dim[3]*yscale]);
-      }
-    }
+    api.animateTo(dim);
   };
   
   
