@@ -280,7 +280,7 @@ function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = '') {
     }
 
     if ($scale) {
-      module_invoke('imageapi', 'image_scale', $image, $scale['width'], $scale['height']);
+      module_invoke('imageapi', 'image_scale_and_crop', $image, $scale['width'], $scale['height']);
     }
 
     $result = module_invoke('imageapi', 'image_close', $image, $dst);
