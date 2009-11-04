@@ -91,7 +91,7 @@ function theme_imagefield_crop_widget(&$element) {
 }
 
 function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
-  static $added_js;
+  static $added_js = array();
 
   $module_path = drupal_get_path('module', 'imagefield_crop');
   drupal_add_js($module_path . '/Jcrop/js/jquery.Jcrop.js');
@@ -137,17 +137,6 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
     'height'  => $h ? $h : 50,
     'changed' => 0,
   );
-
-  if (!$added_js) {
-    // Add settings only once (for ahah).
-    $settings = array(
-      'ratio' => $ratio,
-      'box_width' => (integer)$bwidth,
-      'box_height' => (integer)$bheight,
-    );
-    drupal_add_js(array('imagefield_crop' => $settings), 'setting');
-    $added_js = TRUE;
-  }
 
   if (!empty($file) && 
       is_file($file['filepath']) &&
@@ -198,6 +187,22 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
       '#type' => 'markup',
       '#value' => theme('imagefield_crop_dynamic_preview', $crop_display, $field['widget']['resolution']),
     );
+  
+  if (!isset($added_js[$field['field_name']])) {
+    // Add settings only once (for ahah).
+    $settings = array(
+      'ratio' => $ratio,
+      'box_width' => (integer)$bwidth,
+      'box_height' => (integer)$bheight,
+    );
+    $settings = array( 'box' => array(
+        $field['field_name'] => $settings,
+      ),
+      'preview' => array('fields' => $field['field_name']),
+    );
+    drupal_add_js(array('imagefield_crop' => $settings), 'setting');
+    $added_js[$field['field_name']] = TRUE;
+  }
 
   return $element;
 }
@@ -231,7 +236,7 @@ function imagefield_crop_widget_validate($element) {
 
 function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
   // REFACTOR: consider multiple images
-  $attributes = array_merge((array)$attributes + array('id' => 'cropbox'));
+  $attributes = array_merge((array)$attributes + array('class' => 'cropbox'));
   $output = theme('imagefield_image', $file, $alt, $title, $attributes, $getsize);
   $element = array(
     '#type' => 'element',
@@ -242,6 +247,8 @@ function theme_imagefield_crop_cropbox($file = NULL, $alt = '', $title = '', $at
 
 
 function theme_imagefield_crop_dynamic_preview($file, $resolution) {
+  static $added_js = array();
+  
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
     return '<!-- file not found: '. $file['filepath'] .' -->';
@@ -261,7 +268,10 @@ function theme_imagefield_crop_dynamic_preview($file, $resolution) {
     );
     // REFACTOR: Support multiple fields (i.e. add element delta to setting array)
     $output = '';
-    $output .= '<script type="text/javascript">Drupal.settings.imagefield_crop.preview = '. drupal_to_js($settings) .'</script>';
+    if (!isset($added_js[$url])) {
+      $output .= "<script type='text/javascript'>Drupal.settings.imagefield_crop.preview['$url']=".drupal_to_js($settings)."</script>";
+      $added_js[$url] = TRUE;
+    }
     $output .= '<div class="jcrop-preview-wrapper" style="width:'. $width .'px;height:'. $height .'px;overflow:hidden;"><img src="'. check_url($url) .'" alt="'.
       check_plain($alt) .'" title="'. check_plain($title) .'" class="jcrop-preview" /></div>';
     return $output;
