@@ -1,1 +1,8 @@
 /* $Id$ */
+div.node-form img.cropbox {
+  display: none;
+}
+
+div.node-form div.jcrop-holder img.cropbox {
+  display: block;
+}
