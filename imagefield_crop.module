@@ -653,7 +653,7 @@ function _imagefield_crop_resize($src, $crop = NULL, $resize = 0, $dst = NULL) {
 }
 
 function _imagefield_crop_scale_image($file, $field) {
-  if ($field['widget']['use_unscaled']) {
+  if ($field['widget']['use_unscaled'] && $file['filepath'] != NULL) {
     $unscaled = $file['filepath'];
     file_copy($unscaled, $file['filepath'] .'.unscaled', FILE_EXISTS_REPLACE);
   }
