@@ -119,6 +119,7 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
   else {
     // no output resolution requested
     $ratio = 0;
+    $w = $h = 0;
   }
 
   if ($field['widget']['croparea']) {
@@ -178,7 +179,7 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
       '#type' => 'hidden',
       '#title' => $name,
       '#attributes' => array('class' => 'edit-image-crop-'. $name),
-      '#value' => $file['data']['crop'][$name] ? $file['data']['crop'][$name] : $default,
+      '#value' => !empty($file['data']['crop'][$name]) ? $file['data']['crop'][$name] : $default,
     );
   }
   
