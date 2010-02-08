@@ -10,6 +10,11 @@ A cropping box is shown inside, and the user can resize and move it. Upon
 clicking 'preview' or 'submit', the image is cropped and the result is saved
 within the node.
 
+Watch the screencast[1] by capellic[2]
+
+  [1] http://capellic.com/blog/imagefield-crop
+  [2] http://drupal.org/user/192467
+
 == Features ==
 
 * Dynamic preview is presented during cropping
