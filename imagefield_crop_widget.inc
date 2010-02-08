@@ -30,7 +30,7 @@ function imagefield_crop_widget_settings_form($widget) {
   );
   $form['enforce_ratio'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enforce box crop box ratio'),
+    '#title' => t('Enforce crop box ratio'),
     '#default_value' => isset($widget['enforce_ratio']) ? $widget['enforce_ratio'] : 1,
     '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted'),
     '#element_validate' => array('_imagefield_crop_widget_settings_enforce_ratio_validate'),
