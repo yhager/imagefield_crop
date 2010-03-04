@@ -86,7 +86,7 @@ function imagefield_crop_widget_settings_save($widget) {
 /**
  * FormAPI theme function. Theme the output of an image field.
  */
-function theme_imagefield_crop_widget(&$element) {
+function theme_imagefield_crop_widget($element) {
   return theme('form_element', $element, $element['#children']);
 }
 
