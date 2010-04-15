@@ -15,7 +15,7 @@ Watch the screencast[1] by capellic[2]
   [1] http://capellic.com/blog/imagefield-crop
   [2] http://drupal.org/user/192467
 
-== Features ==
+= Features =
 
 * Dynamic preview is presented during cropping
 * Original image is displayed every time for re-cropping
@@ -25,13 +25,33 @@ Watch the screencast[1] by capellic[2]
 
 
 = Prerequisites =
-You will need imagefield and imageapi enabled in order to use this module, along with a graphics processing engine (gd, imagemagick, or anything else imageapi.module can work with).
+* imagefield (http://drupal.org/project/imagefield)
+* filefield (http://drupal.org/project/filefield)
+* imageapi (http://drupal.org/project/imageapi)
+* Graphics processing engine (gd, imagemagick, or anything else imageapi.module can work with).
 
 
 = Installation =
-* Install the module and enable it.
-* Set appropriate permissions at (/admin/user/permissions) under sections "content_permissions module", "node module".
-* On the imagefield configuration page (admin/content/types/<content_type>/fields/<your_image_field>) choose the 'Image with cropping' widget.
-* Save your field. You can set the widget settings form where you can choose the cropping box size, and other configuration options.
+* To install the module copy the 'imagefield_crop' folder to your sites/all/modules directory.
+* Go to admin/build/modules. Enable the module.
+  Read more about installing modules at http://drupal.org/node/70151
+
+
+= Configuration and usage =
+* We assume that you have already created a new content type. Edit your content type fields at admin/content/types
+* Click on appropriate MANAGE FIELDS link.
+* Add a new field. To do so click on SELECT A FIELD TYPE dropdown menu. Select FILE. Click on FILE UPLOAD dropdown menu. Select IMAGE WITH CROPPING.
+* Click on SAVE button.
+* Follow instructions on the next page. You can choose the cropping box size, and other configuration options. If unsure leave default configuration. Click on SAVE FIELD SETTINGS button.
+* Create a new item at /node/add
+* Click on BROWSE button. Select an image.
+* Click on UPLOAD button
 * Upon uploading an image, or editing an existing node, the image cropping interface will be presented.
+
+
+= Contribute. Report issue. Request support. Request new feature. =
+* Go to the module issue queue at http://drupal.org/project/issues/imagefield_crop?status=All&categories=All
+* Click on CREATE A NEW ISSUE link.
+* Fill the form.
+* To get a status report on your request go to http://drupal.org/project/issues/user
 
