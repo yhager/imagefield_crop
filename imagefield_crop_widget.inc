@@ -32,10 +32,16 @@ function imagefield_crop_widget_settings_form($widget) {
     '#type' => 'checkbox',
     '#title' => t('Enforce crop box ratio'),
     '#default_value' => isset($widget['enforce_ratio']) ? $widget['enforce_ratio'] : 1,
-    '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted'),
+    '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted.'),
     '#element_validate' => array('_imagefield_crop_widget_settings_enforce_ratio_validate'),
   );
-
+  $form['enforce_minimum'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enforce minimum crop size based on the output size'),
+    '#default_value' => isset($widget['enforce_minimum']) ? $widget['enforce_minimum'] : 1,
+    '#description' => t('Check this to force a minimum cropping selection equal to the output size. NOTE: If you leave this unchecked you might get zoomed pixels if the cropping area is smaller than the output resolution.'),
+    '#element_validate' => array('_imagefield_crop_widget_settings_enforce_minimum'),
+  );
   $form['croparea'] = array(
     '#type' => 'textfield',
     '#title' => t('The resolution of the cropping area'),
@@ -64,6 +70,15 @@ function _imagefield_crop_widget_settings_enforce_ratio_validate($element, &$for
   }
 }
 
+function _imagefield_crop_widget_settings_enforce_minimum($element, &$form_state) {
+  list($rw, $rh) = explode('x', $form_state['values']['resolution']);
+  if ($form_state['values']['enforce_minimum'] && 
+      (!is_numeric($rw) || intval($rw) != $rw || $rw <= 0 ||
+       !is_numeric($rh) || intval($rh) != $rh || $rh <= 0)) {
+    form_error($element, t('Target resolution must be defined as WIDTH_HEIGHT if minimum is to be enforced'));
+  }
+}
+
 function _imagefield_crop_widget_settings_croparea_validate($element,&$form_state) {
   if ($form_state['values']['croparea']) {
     list($cw, $ch) = explode('x', $form_state['values']['croparea']);
@@ -79,7 +94,7 @@ function imagefield_crop_widget_settings_validate($widget) {
 }
 
 function imagefield_crop_widget_settings_save($widget) {
-  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea');
+  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea', 'enforce_minimum');
   return array_merge($settings, module_invoke('imagefield', 'widget_settings_save', $widget));
 }
 
@@ -194,6 +209,10 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
           'ratio' => $ratio,
           'box_width' => (integer)$bwidth,
           'box_height' => (integer)$bheight,
+        ),
+        'minimum' => array(
+          'width'   => $field['widget']['enforce_minimum'] ? $w : NULL,
+          'height'  => $field['widget']['enforce_minimum'] ? $h : NULL,
         ),
         'preview' => $preview_js,
       ),

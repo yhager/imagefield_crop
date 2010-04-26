@@ -45,6 +45,7 @@ Drupal.behaviors.imagefield_crop = function (context) {
         aspectRatio: Drupal.settings.imagefield_crop[id].box.ratio,
         boxWidth: Drupal.settings.imagefield_crop[id].box.box_width,
         boxHeight: Drupal.settings.imagefield_crop[id].box.box_height,
+        minSize: [Drupal.settings.imagefield_crop[id].minimum.width, Drupal.settings.imagefield_crop[id].minimum.height],
         setSelect: [
           parseInt($(".edit-image-crop-x", widget).val()),
           parseInt($(".edit-image-crop-y", widget).val()),
