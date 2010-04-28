@@ -403,8 +403,11 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
       'height' => array('weight' => 8, 'default' => $h ? $h : 50),
       'changed' => array('weight' => 0, 'default' => 0),
     );
-    
+
+// ###
 //    drupal_set_message('node_field is <pre>'. print_r($node_field, TRUE)  .'</pre>');
+// ###
+
     foreach ($node_field as $delta => $file) {
       if ($file['filepath'] && !$file['flags']['delete']) {
         $form[$fieldname][$delta] = array(
@@ -469,7 +472,9 @@ function _imagefield_crop_widget_form($node, $field, &$node_field) {
         );
 
 
-//      drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
+// ###
+//        drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
+// ###
 
         $form[$fieldname][$delta]['description'] = array(
           '#type' => 'markup',
@@ -661,6 +666,7 @@ function _imagefield_crop_scale_image($file, $field) {
   return $file;
 }
 
+
 function theme_imagefield_crop_edit_crop_image_row($element) {
 
   list($cropw, $croph) = explode('x', $element['#croparea']);
@@ -668,7 +674,8 @@ function theme_imagefield_crop_edit_crop_image_row($element) {
   $output .= '<div class="imagefield-crop-preview" style="width:'. $cropw .'px; height:'. $croph .'px">';
   $output .= drupal_render($element['preview']) .'</div>';
   if ($element['crop']) {
-    $output .= '<div class="imagefield-edit-image-detail">';
+
+	 $output .= '<div class="imagefield-edit-image-detail" id="imagefield-edit-image-detail">';
     
     // REFACTOR: Don't 'flags' only if  multiple is unsupported
     $output .= '<div class="imagefield-edit-image-flags">'. drupal_render($element['flags']) .'</div>';
@@ -680,7 +687,7 @@ function theme_imagefield_crop_edit_crop_image_row($element) {
     $output .= drupal_render($element['title']);
     $output .= '</div>';
   }
-  $output = '<div class="imagefield-edit-image-row clear-block">'. $output .'</div>';
+  $output = '<div class="imagefield-edit-image-row clear-block" id="imagefield-edit-image-row">'. $output .'</div>';
   if (isset($element['replace'])) {
     $output .= '<div class="imagefield-edit-image-replace">'. drupal_render($element['replace']) .'</div>';
   }
@@ -689,6 +696,11 @@ function theme_imagefield_crop_edit_crop_image_row($element) {
 
 function theme_imagefield_crop_crop_image($file = NULL, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
   $output = '<div class="imagefield-crop-wrapper">';
+
+// ###
+//        drupal_set_message('theme_imagefield_crop_crop_image $file: <pre>'. print_r($file, true) .'</pre>');
+// ###
+
 
   if (!empty($file)) {
     $file = (array)$file;
@@ -699,23 +711,22 @@ function theme_imagefield_crop_crop_image($file = NULL, $alt = '', $title = '', 
       $title = empty($title) ? $file['title'] : $title;
       
       $url = $file['fid'] == 'upload' ? url($file['preview']) : file_create_url($file['filepath']);
+      $cropId = $file['fid'].'_'.str_replace("/", "", str_replace(".", "", $file['preview']));
 
       $output .= '
-<div id="image-crop-container"                                             
+<div id="image-crop-container_'.$cropId.'" class="image-crop-container"                                             
      style="background-image: url(\''. $url .'\'); width:'. $width  .'px; height:'. $height  .'px; margin-left:-'. $width/2  .'px; margin-top:-'. $height/2 .'px;">   
 </div>                                                          
                                                                 
-<div id="resizeMe"                                              
-     style="background-image: url(\''. $url .'\')">   
-	<div id="resizeSE"></div>                                   
-	<div id="resizeE"></div>                                    
-	<div id="resizeNE"></div>                                   
-	<div id="resizeN"></div>                                    
-	<div id="resizeNW"></div>                                   
-	<div id="resizeW"></div>                                    
-	<div id="resizeSW"></div>                                   
-	<div id="resizeS"></div>                                    
-
+<div id="resizeMe_'.$cropId.'" class="resizeMe" style="background-image: url(\''. $url .'\')">   
+	<div id="resizeSE_'.$cropId.'" class="resizeSE"></div>                                   
+	<div id="resizeE_'.$cropId.'" class="resizeE"></div>                                    
+	<div id="resizeNE_'.$cropId.'" class="resizeNE"></div>                                   
+	<div id="resizeN_'.$cropId.'" class="resizeN"></div>                                    
+	<div id="resizeNW_'.$cropId.'" class="resizeNW"></div>                                   
+	<div id="resizeW_'.$cropId.'" class="resizeW"></div>                                    
+	<div id="resizeSW_'.$cropId.'" class="resizeSW"></div>                                   
+	<div id="resizeS_'.$cropId.'" class="resizeS"></div>                                    
 </div>';
     }
   }
