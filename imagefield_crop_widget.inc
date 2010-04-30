@@ -8,16 +8,6 @@ module_load_include('inc','imagefield', 'imagefield_widget');
 
 function imagefield_crop_widget_settings_form($widget) {
   $form = module_invoke('imagefield', 'widget_settings_form', $widget);
-  $form['collapsible'] = array(
-    '#type' => 'radios',
-    '#title' => t('Collapsible behavior'),
-    '#options' => array(
-      1 => t('None.'),
-      2 => t('Collapsible, expanded by default.'),
-      3 => t('Collapsible, collapsed by default.'),
-    ),
-    '#default_value' => isset($widget['collapsible']) ? $widget['collapsible'] : 2,
-  );
   $form['resolution'] = array(
     '#type' => 'textfield', 
     '#title' => t('The resolution to crop the image onto'), 
@@ -97,7 +87,7 @@ function imagefield_crop_widget_settings_validate($widget) {
 }
 
 function imagefield_crop_widget_settings_save($widget) {
-  $settings = array('collapsible', 'resolution', 'enforce_ratio', 'croparea', 'enforce_minimum');
+  $settings = array('resolution', 'enforce_ratio', 'croparea', 'enforce_minimum');
   return array_merge($settings, module_invoke('imagefield', 'widget_settings_save', $widget));
 }
 
@@ -146,9 +136,6 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
   else {
     $bwidth = $bheight = 0;
   }
-  $element['#collapsible'] = ($field['widget']['collapsible'] != 1);
-  $element['#collapsed'] = ($field['widget']['collapsible'] == 3);
-
   $defaults = array(
     'x'       => 0,
     'y'       => 0,
