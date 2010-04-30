@@ -62,6 +62,9 @@ function _imagefield_crop_widget_settings_resolution_validate($element, &$form_s
        !is_numeric($rh) || intval($rh) != $rh || $rh <= 0)) {
     form_error($element, t('Target resolution must be defined as WIDTHxHEIGHT if resolution is to be enforced'));
   }
+  if (($rw != $rh) && ($rw == 0 || $rh == 0)) {
+    form_error($element, t('The resolution is not valid. Set to 0 if you do not want to rescale'));
+  }
 }
 
 function _imagefield_crop_widget_settings_enforce_ratio_validate($element, &$form_state) {
