@@ -3,10 +3,11 @@
 var cropIds = new Array();
 
 function imagefieldCropSetDimensions(cropId, x, y, w, h) {
-  $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-x").val(x);
-  $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-y").val(y);
-  if (w) $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-width").val(w);
-  if (h) $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-height").val(h);
+  var context = $('#imagefield-edit-image-row-' + cropId);
+  $(".edit-image-crop-x", context).val(x);
+  $(".edit-image-crop-y", context).val(y);
+  if (w) $(".edit-image-crop-width", context).val(w);
+  if (h) $(".edit-image-crop-height", context).val(h);
 }
 
 function imagefieldCropInit(cropId) {
@@ -14,8 +15,10 @@ function imagefieldCropInit(cropId) {
   var resizeT;
   var dragT;
   var changed = false;
-  if ($("#image-crop-container_" + cropId).size()) {
-    containerpos = findPos($("#image-crop-container_" + cropId).get(0));
+  var context = $('#imagefield-edit-image-row-' + cropId);
+
+  if ($("#image-crop-container-" + cropId).size()) {
+    containerpos = findPos($("#image-crop-container-" + cropId).get(0));
   }
   else {
     containerpos = {x:0, y:0};
@@ -31,18 +34,18 @@ function imagefieldCropInit(cropId) {
     return {x:curleft,y:curtop};
   }
 
-  $('#resizeMe_' + cropId).ready(function() {
+  $('#resizeMe-' + cropId).ready(function() {
     // this is needed to set the box initially according to the form values 
-    var obj = $('#resizeMe_' + cropId).get(0);
+    var obj = $('#resizeMe-' + cropId).get(0);
     var newpos = {
-      left: parseInt($('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-x").val()), 
-      top:  parseInt($('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-y").val())
+      left: parseInt($(".edit-image-crop-x", context).val()), 
+      top:  parseInt($(".edit-image-crop-y", context).val())
     }
     var newsize = {
-      width:  parseInt($('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-width").val()), 
-      height: parseInt($('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-height").val())
+      width:  parseInt($(".edit-image-crop-width", context).val()), 
+      height: parseInt($(".edit-image-crop-height", context).val())
     }
-    if ($('#resizeMe_' + cropId).size()) {
+    if ($('#resizeMe-' + cropId).size()) {
       obj.style.backgroundPosition = (-1)*newpos.left + 'px ' + (-1)*newpos.top + 'px';
       obj.style.left = (newpos.left + containerpos.x) + 'px';
       obj.style.top  = (newpos.top  + containerpos.y) + 'px';
@@ -50,24 +53,24 @@ function imagefieldCropInit(cropId) {
       obj.style.height  = newsize.height + 'px';
     }
   });
-  $('#resizeMe_' + cropId).Resizable(
+  $('#resizeMe-' + cropId).Resizable(
     {
       minWidth: 20,
       minHeight: 20,
-      maxWidth: 1 + $('#resizeMe_' + cropId).parents('.imagefield-crop-wrapper').width(),
-      maxHeight: 1 + $('#resizeMe_' + cropId).parents('.imagefield-crop-wrapper').height(),
+      maxWidth: 1 + $('#resizeMe-' + cropId).parents('.imagefield-crop-wrapper').width(),
+      maxHeight: 1 + $('#resizeMe-' + cropId).parents('.imagefield-crop-wrapper').height(),
       minTop: 1,
       minLeft: 1,
-      maxRight: $('#resizeMe_' + cropId).parents('.imagefield-crop-wrapper').width(),
-      maxBottom: $('#resizeMe_' + cropId).parents('.imagefield-crop-wrapper').height(),
+      maxRight: $('#resizeMe-' + cropId).parents('.imagefield-crop-wrapper').width(),
+      maxBottom: $('#resizeMe-' + cropId).parents('.imagefield-crop-wrapper').height(),
       dragHandle: true,
-      ratio: Drupal.imagefield_crop.ratio,
+      ratio: eval ('Drupal.' + 'imagefield_crop_' + cropId.substring(0,cropId.indexOf('-')) + '.ratio'),
       onDrag: function(x, y)
       {
         clearTimeout(dragT);
         if (!changed) {
           changed = true;
-          $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-changed").val(1);
+          $(".edit-image-crop-changed", context).val(1);
         }
         this.style.backgroundPosition = ((-1)*(x - containerpos.x)) + 'px ' + ((-1)*(y - containerpos.y)) + 'px';
         xx = x-containerpos.x;
@@ -75,21 +78,21 @@ function imagefieldCropInit(cropId) {
         dragT = setTimeout('imagefieldCropSetDimensions ("' + cropId + '",' + xx + ',' + yy + ')', 200);
       },
       handlers: {
-        se: '#resizeSE_' + cropId,
-        e: '#resizeE_' + cropId,
-        ne: '#resizeNE_' + cropId,
-        n: '#resizeN_' + cropId,
-        nw: '#resizeNW_' + cropId,
-        w: '#resizeW_' + cropId,
-        sw: '#resizeSW_' + cropId,
-        s: '#resizeS_' + cropId
+        se: '#resizeSE-' + cropId,
+        e: '#resizeE-' + cropId,
+        ne: '#resizeNE-' + cropId,
+        n: '#resizeN-' + cropId,
+        nw: '#resizeNW-' + cropId,
+        w: '#resizeW-' + cropId,
+        sw: '#resizeSW-' + cropId,
+        s: '#resizeS-' + cropId
       },
 
       onResize : function(size, position) {
         clearTimeout(resizeT);
         if (!changed) {
           changed = true;
-          $('#resizeMe_' + cropId).parents('#imagefield-edit-image-row').find(".edit-image-crop-changed").val(1);
+          $(".edit-image-crop-changed", context).val(1);
         }
         this.style.backgroundPosition = ((-1)*(position.left - containerpos.x)) + 'px ' + ((-1)*(position.top - containerpos.y)) + 'px';
         x = position.left-containerpos.x;
@@ -105,7 +108,7 @@ function imagefieldCropInit(cropId) {
 
 var imageFieldCropInterval;
 function imageFieldCropGo(cropId) {
-  if ($("#image-crop-container_" + cropId).is(':visible')) {
+  if ($("#image-crop-container-" + cropId).is(':visible')) {
     clearInterval(imageFieldCropInterval);
     imagefieldCropInit(cropId);
   }
@@ -114,7 +117,7 @@ function imageFieldCropGo(cropId) {
 function imageFieldCropBind(cropId) {
   $('fieldset.collapsible > legend a').click(function(event) {
     var $target = $(event.target);
-    if ($target.parents('fieldset').find('#image-crop-container_' + cropId).length > 0) {
+    if ($target.parents('fieldset').find('#image-crop-container-' + cropId).length > 0) {
       imageFieldCropInterval = setInterval('imageFieldCropGo("' + cropId + '")', 300);
     }
   });
