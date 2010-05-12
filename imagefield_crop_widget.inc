@@ -46,29 +46,39 @@ function imagefield_crop_widget_settings_form($widget) {
 }
 
 function _imagefield_crop_widget_settings_resolution_validate($element, &$form_state) {
-  list($rw, $rh) = explode('x', $form_state['values']['resolution']);
+  if ($form_state['values']['resolution'] == 0) {
+    $rw = $rh = 0;    
+  }
+  else {
+    list($rw, $rh) = explode('x', $form_state['values']['resolution']);
+  }
   if ($form_state['values']['enforce_ratio'] &&
       (!is_numeric($rw) || intval($rw) != $rw || $rw <= 0 ||
        !is_numeric($rh) || intval($rh) != $rh || $rh <= 0)) {
-    form_error($element, t('Target resolution must be defined as WIDTHxHEIGHT if resolution is to be enforced'));
+    form_error($element, t('Target resolution must be defined as WIDTHxHEIGHT if resolution is to be enforced.'));
   }
   if (($rw != $rh) && ($rw == 0 || $rh == 0)) {
-    form_error($element, t('The resolution is not valid. Set to 0 if you do not want to rescale'));
+    form_error($element, t('The resolution is not valid. Set to 0x0 if you do not want to rescale.'));
   }
 }
 
 function _imagefield_crop_widget_settings_enforce_ratio_validate($element, &$form_state) {
   if ($form_state['values']['resolution'] && !$form_state['values']['enforce_ratio']) {
-    drupal_set_message('Output resolution is defined, but not enforced. Final images might be distroted');
+    drupal_set_message('Output resolution is defined, but not enforced. Final images might be distorted.');
   }
 }
 
 function _imagefield_crop_widget_settings_enforce_minimum($element, &$form_state) {
-  list($rw, $rh) = explode('x', $form_state['values']['resolution']);
+  if ($form_state['values']['resolution'] == 0) {
+    $rw = $rh = 0;    
+  }
+  else {
+    list($rw, $rh) = explode('x', $form_state['values']['resolution']);
+  }
   if ($form_state['values']['enforce_minimum'] && 
       (!is_numeric($rw) || intval($rw) != $rw || $rw <= 0 ||
        !is_numeric($rh) || intval($rh) != $rh || $rh <= 0)) {
-    form_error($element, t('Target resolution must be defined as WIDTH_HEIGHT if minimum is to be enforced'));
+    form_error($element, t('Target resolution must be defined as WIDTH_HEIGHT if minimum is to be enforced.'));
   }
 }
 
@@ -77,7 +87,7 @@ function _imagefield_crop_widget_settings_croparea_validate($element,&$form_stat
     list($cw, $ch) = explode('x', $form_state['values']['croparea']);
     if (!is_numeric($cw) || intval($cw) != $cw || $cw < 0 ||
         !is_numeric($ch) || intval($ch) != $ch || $ch < 0) {
-      form_error($element, t('Crop area resolution must be defined as WIDTHxHEIGHT'));
+      form_error($element, t('Crop area resolution must be defined as WIDTHxHEIGHT.'));
     }
   }
 }
@@ -221,7 +231,7 @@ function imagefield_crop_widget_process($element, $edit, &$form_state, $form) {
 }
 
 function imagefield_crop_widget_value($element, $edit = FALSE) {
-  if ($edit) {
+  if ($edit && isset($edit['data'])) {
     $file = field_file_load($edit['fid']);
     $field = content_fields($element['#field_name'], $element['#type_name']);
     
@@ -243,7 +253,7 @@ function imagefield_crop_widget_value($element, $edit = FALSE) {
 }
 
 function imagefield_crop_widget_validate($element) {
-  // Check if crop values are not empty
+  // @todo: Check if crop values are not empty.
 }
 
 
