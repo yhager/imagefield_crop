@@ -297,18 +297,18 @@ function theme_imagefield_crop_dynamic_preview($file, $resolution) {
 }
 
 function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = '') {
-  $image = module_invoke('imageapi', 'image_open', $src);
+  $image = imageapi_image_open($src);
 
   if ($image) {
     if ($crop) {
-      module_invoke('imageapi', 'image_crop', $image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
+      imageapi_image_crop($image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
     }
 
     if ($scale) {
-      module_invoke('imageapi', 'image_scale_and_crop', $image, $scale['width'], $scale['height']);
+      imageapi_image_scale_and_crop($image, $scale['width'], $scale['height']);
     }
 
-    $result = module_invoke('imageapi', 'image_close', $image, $dst);
+    $result = imageapi_image_close($image, $dst);
   }
 
   return $result;
