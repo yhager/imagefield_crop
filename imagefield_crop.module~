@@ -1,0 +1,237 @@
+<?php
+
+// $Id$
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function imagefield_crop_field_widget_info() {
+  return array(
+    'imagefield_crop_widget' => array(
+      'label' => t('Image with cropping'),
+      'field types' => array('image'),
+      'settings' => array(
+        'progress_indicator' => 'throbber',
+        'preview_image_style' => 'thumbnail',
+        'collapsible' => 2,
+        'resolution' => '200x150',
+        'enforce_ratio' => true,
+        'croparea' => '500x500',
+      ),
+      'behaviors' => array(
+        'multiple values' => FIELD_BEHAVIOR_CUSTOM,
+        'default value' => FIELD_BEHAVIOR_NONE,
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_settings_form().
+ */
+function imagefield_crop_field_widget_settings_form($field, $instance) {
+  $widget = $instance['widget'];
+  $settings = $widget['settings'];
+
+  // Use the image widget settings form.
+  $form = image_field_widget_settings_form($field, $instance);
+
+  $form['collapsible'] = array(
+    '#type' => 'radios',
+    '#title' => t('Collapsible behavior'),
+    '#options' => array(
+      1 => t('None.'),
+      2 => t('Collapsible, expanded by default.'),
+      3 => t('Collapsible, collapsed by default.'),
+    ),
+    '#default_value' => $settings['collapsible'],
+  );
+
+  // Resolution settings.
+  $resolution = explode('x', $settings['resolution']) + array('', '');
+  $form['resolution'] = array(
+    '#title' => t('The resolution to crop the image onto'),
+    '#element_validate' => array('_image_field_resolution_validate', '_imagefield_crop_widget_resolution_validate'),
+    '#theme_wrappers' => array('form_element'),
+    '#description' => t('The output resolution of the cropped image, expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 not to rescale after cropping. Note: output resolution must be defined in order to present a dynamic preview.'),
+  );
+  $form['resolution']['x'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $resolution[0],
+    '#size' => 5,
+    '#maxlength' => 5,
+    '#field_suffix' =>' x ',
+    '#theme_wrappers' => array(),
+  );
+  $form['resolution']['y'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $resolution[1],
+    '#size' => 5,
+    '#maxlength' => 5,
+    '#field_suffix' => ' ' . t('pixels'),
+    '#theme_wrappers' => array(),
+  );
+  $form['enforce_ratio'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enforce crop box ratio'),
+    '#default_value' => $settings['enforce_ratio'],
+    '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted'),
+    '#element_validate' => array('_imagefield_crop_widget_enforce_ratio_validate'),
+  );
+
+  // Crop area settings
+  $croparea = explode('x', $settings['croparea']) + array('', '');
+  $form['croparea'] = array(
+    '#title' => t('The resolution of the cropping area'),
+    '#element_validate' => array('_imagefield_crop_widget_croparea_validate'),
+    '#theme_wrappers' => array('form_element'),
+    '#description' => t('The resolution of the area used for the cropping of the image. Image will displayed at this resolution for cropping. Use WIDTHxHEIGHT format, empty or zero values are permitted, e.g. 500x will limit crop box to 500 pixels width.'),
+  );
+  $form['croparea']['x'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $croparea[0],
+    '#size' => 5,
+    '#maxlength' => 5,
+    '#field_suffix' => ' x ',
+    '#theme_wrappers' => array(),
+  );
+  $form['resolution']['y'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $croparea[1],
+    '#size' => 5,
+    '#maxlength' => 5,
+    '#field_suffix' => ' ' . t('pixels'),
+    '#theme_wrappers' => array(),
+  );
+    
+  return $form;
+}
+
+function _imagefield_crop_widget_resolution_validate($element, &$form_state) {
+  // _image_field_resolution_validate() does most of the validation
+  if ($form_state['values']['enforce_ratio'] && (empty($element['x']['#value']))) {
+    form_error($element, t('Target resolution must be defined as WIDTHxHEIGHT if resolution is to be enforced'));
+  }
+}
+
+function _imagefield_crop_widget_enforce_ratio_validate($element, &$form_state) {
+  if ($form_state['values']['resolution']['x'] && !$element['#value']) {
+    drupal_set_message(t('Output resolution is defined, but not enforced. Final images might be distroted'));
+  }
+}
+
+function _imagefield_crop_widget_croparea_validate($element, &$form_state) {
+  foreach (array('x', 'y') as $dimension) {
+    $value = $element[$dimension]['#value'];
+    if (!empty($value) && !is_numeric($value)) {
+      form_error($element[$dimension], t('The @dimension value must be numeric.', array('@dimesion' => $dimension)));
+      return;
+    }
+  }
+  form_set_value($element, intval($element['x']['#value']) . 'x' . intval($element['y']['#value']), $form_state);
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function imagefield_crop_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  $elements = image_field_widget_form($form, $form_state, $field, $instance, $langcode, $items, $delta, $element);
+  foreach (element_children($elements) as $delta) {
+    // Add all extra functionality provided by the imagefield_crop widget.
+    $elements[$delta]['#process'][] = 'imagefield_crop_widget_process';
+  }
+  return $elements;
+}
+
+/**
+ * An element #process callback for the imagefield_crop field type.
+ */
+function imagefield_crop_widget_process($element, &$form_state, $form) {
+  $item = $element['#value'];
+  $item['fid'] = $element['fid']['#value'];
+
+  $instance = $form_state['field'][$element['#field_name']][$element['#language']]['instance'];
+
+  $settings = $instance['settings'];
+  $widget_settings = $instance['widget']['settings'];
+  //var_dump(explode('x', $widget_settings['resolution']));
+  $element['#theme'] = 'imagefield_crop_widget';
+
+  $path = drupal_get_path('module', 'imagefield_crop');
+  $element['#attached']['js'][] = "$path/Jcrop/js/jquery.Jcrop.js";
+  // We must define Drupal.behaviors for ahah to work, even if there is no file
+  $element['#attached']['js'][] = "$path/imagefield_crop.js";
+  // $element['#attached']['css'][] = "$path/imagefield_crop.css";
+  $element['#attached']['css'][] = "$path/Jcrop/css/jquery.Jcrop.css";
+
+  if ($element['#file']) {
+
+    $element['preview'] = array(
+      '#type' => 'markup',
+      '#file' => $element['#file'],
+      '#process' => array('imagefield_crop_widget_preview_process'),
+      '#markup' => theme('image_style', array('style_name' => $widget_settings['preview_image_style'], 'path' => $element['#file']->uri, 'getsize' => FALSE)),
+    );
+    $element['cropbox'] = array(
+      '#type' => 'markup',
+      '#markup' => theme('image', array('path' => $element['#file']->uri, 'attributes' => array('class' => 'cropbox', 'id' => $element['#id'] . '-cropbox'))),
+    );
+    list($w, $h) = explode('x', $widget_settings['resolution']);
+    $settings = array(
+      $element['#id'] => array(
+        'box' => array(
+          'ratio' => $widget_settings['enforce_ratio'] * $w/$h,
+          'box_width' => $w,
+          'box_height' => $h,
+        ),
+        //'preview' => $preview_js,
+      ),
+    );
+    $element['#attached']['js'][] = array(
+      'data' => array('imagefield_crop' => $settings),
+      'type' => 'setting',
+      'scope' => 'header',
+      );
+
+  }
+  return $element;
+}
+
+function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
+  // add here js needed for preview area 
+}
+
+/*********************/
+/* Theming functions */
+/*********************/
+
+/**
+ * Implements hook_theme().
+ */
+function imagefield_crop_theme() {
+  return array(
+    'imagefield_crop_widget' => array(
+      'render element' => 'element',
+    ),
+  );
+}
+
+function theme_imagefield_crop_widget($variables) {
+  $element = $variables['element'];
+  $output = '';
+  $output .= '<div class="imagefield-crop-widget form-managed-file clearfix">';
+
+  //$output .= '<pre>' . print_r($element['#attached'],1) . '</pre>';
+  if (isset($element['preview'])) {
+    $output .= '<div class="imagfield-crop-preview">';
+    $output .= drupal_render($element['preview']);
+    $output .= '</div>';
+  }
+  if (isset($element['cropbox'])) {
+    $output .= '<div class="imagefield-crop-cropbox">';
+    $output .= drupal_render($element['cropbox']);
+    $output .= '</div>';
+  }
+  $output .= drupal_render_children($element);
+  return $output;
+}
