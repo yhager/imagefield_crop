@@ -17,11 +17,13 @@ Drupal.behaviors.imagefield_crop = {
         var self = $(this);
 
         //alert("found a cropbox" + self.attr('id'));
-      
+
         // get the id attribute for multiple image support
         var self_id = self.attr('id');
         var id = self_id.substring(0, self_id.indexOf('-cropbox'));
         // alert ("id is " + id);
+				//alert ("box width is " + settings.imagefield_crop[id].box.box_width);
+				//alert ("box height is " + settings.imagefield_crop[id].box.box_height);
         // get the name attribute for imagefield name
         var widget = self.parent().parent();
 
@@ -51,7 +53,7 @@ Drupal.behaviors.imagefield_crop = {
           aspectRatio: settings.imagefield_crop[id].box.ratio,
           boxWidth: settings.imagefield_crop[id].box.box_width,
           boxHeight: settings.imagefield_crop[id].box.box_height,
-                    
+
           setSelect: [
             parseInt($(".edit-image-crop-x", widget).val()),
             parseInt($(".edit-image-crop-y", widget).val()),

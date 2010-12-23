@@ -1,11 +1,10 @@
 <?php
 
-// $Id$
-
 /**
  * Implements hook_field_widget_info().
  */
 function imagefield_crop_field_widget_info() {
+  dpm(__FUNCTION__);
   return array(
     'imagefield_crop_widget' => array(
       'label' => t('Image with cropping'),
@@ -30,6 +29,7 @@ function imagefield_crop_field_widget_info() {
  * Implements hook_field_widget_settings_form().
  */
 function imagefield_crop_field_widget_settings_form($field, $instance) {
+  dpm(__FUNCTION__);
   $widget = $instance['widget'];
   $settings = $widget['settings'];
 
@@ -108,6 +108,7 @@ function imagefield_crop_field_widget_settings_form($field, $instance) {
 }
 
 function _imagefield_crop_widget_resolution_validate($element, &$form_state) {
+  dpm(__FUNCTION__);
 	$settings = $form_state['values']['instance']['widget']['settings'];
   // _image_field_resolution_validate() does most of the validation
   if ($settings['enforce_ratio'] && (empty($element['x']['#value']))) {
@@ -116,6 +117,7 @@ function _imagefield_crop_widget_resolution_validate($element, &$form_state) {
 }
 
 function _imagefield_crop_widget_enforce_ratio_validate($element, &$form_state) {
+  dpm(__FUNCTION__);
 	$settings = $form_state['values']['instance']['widget']['settings'];
   if ($settings['resolution']['x'] && !$element['#value']) {
     drupal_set_message(t('Output resolution is defined, but not enforced. Final images might be distroted'));
@@ -123,6 +125,7 @@ function _imagefield_crop_widget_enforce_ratio_validate($element, &$form_state) 
 }
 
 function _imagefield_crop_widget_croparea_validate($element, &$form_state) {
+  dpm(__FUNCTION__);
   foreach (array('x', 'y') as $dimension) {
 		$value = $element[$dimension]['#value'];
     if (!empty($value) && !is_numeric($value)) {
@@ -137,10 +140,16 @@ function _imagefield_crop_widget_croparea_validate($element, &$form_state) {
  * Implements hook_field_widget_form().
  */
 function imagefield_crop_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  dpm(__FUNCTION__);
   $elements = image_field_widget_form($form, $form_state, $field, $instance, $langcode, $items, $delta, $element);
   foreach (element_children($elements) as $delta) {
     // Add all extra functionality provided by the imagefield_crop widget.
     $elements[$delta]['#process'][] = 'imagefield_crop_widget_process';
+
+    //dpm($elements[$delta]);
+    // Register our value callback
+    $elements[$delta]['#file_value_callbacks'][] = 'imagefield_crop_widget_value';
+
   }
   return $elements;
 }
@@ -149,6 +158,8 @@ function imagefield_crop_field_widget_form(&$form, &$form_state, $field, $instan
  * An element #process callback for the imagefield_crop field type.
  */
 function imagefield_crop_widget_process($element, &$form_state, $form) {
+  dpm(__FUNCTION__);
+  //dpm($element);
   $item = $element['#value'];
   $item['fid'] = $element['fid']['#value'];
 
@@ -178,11 +189,14 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
       '#type' => 'markup',
       '#markup' => theme('image', array('path' => $element['#file']->uri, 'attributes' => array('class' => 'cropbox', 'id' => $element['#id'] . '-cropbox'))),
     );
-    list($w, $h) = explode('x', $widget_settings['resolution']);
+    //    $element['cropinfo'] = array();
+    $element['cropinfo'] = imagefield_add_cropinfo_fields();
+    //    $element['x'] = array('#title' => 'x', '#type' => 'textfield', '#default_value' => 'ah');
+    list($w, $h) = explode('x', $widget_settings['croparea']);
     $settings = array(
       $element['#id'] => array(
         'box' => array(
-          'ratio' => $widget_settings['enforce_ratio'] * $w/$h,
+          'ratio' => $h ? $widget_settings['enforce_ratio'] * $w/$h : 0,
           'box_width' => $w,
           'box_height' => $h,
         ),
@@ -199,8 +213,63 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   return $element;
 }
 
+function imagefield_add_cropinfo_fields() {
+  $defaults = array(
+    'x'       => 0,
+    'y'       => 0,
+    'width'   => 50,
+    'height'  => 50,
+    'changed' => 0,
+  );
+
+  foreach ($defaults as $name => $default) {
+    $element[$name] = array(
+      '#type' => 'textfield',
+      '#title' => $name,
+      '#attributes' => array('class' => array('edit-image-crop-'. $name)),
+      '#default_value' => $default,
+    );
+  }
+  return $element;
+}
+
+
 function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
   // add here js needed for preview area 
+  dpm(__FUNCTION__);
+  //dpm($form_state);
+}
+
+
+/**
+ * value callback
+ *
+ * Registered by imagefield_crop_field_widget_form()
+ */
+function imagefield_crop_widget_value(&$element, &$input, $form_state) {
+  // set $input['fid'] and that will be the value of the element
+  dpm(__FUNCTION__);
+  //  dpm($element);
+  if (!empty($input['fid']) && $input['cropinfo']['changed']) {
+    dpm($input);
+    dpm($instance);
+
+    // get crop and scale info
+    $crop = $input['cropinfo'];
+    $instance = field_widget_instance($element, $form_state); // <== Do we need $form_state here?
+    if ($instance['widget']['settings']['resolution']) {
+      list($scale['width'], $scale['height']) = explode('x', $instance['widget']['settings']['resolution']);
+    }
+
+    // get the source file name
+    $src = file_load($input['fid']);
+    $dst = $src;
+    $dst->fid = 0;
+    $dst->filename .= ".cropped";
+    _imagefield_crop_resize($src->filepath, $crop, $scale, $dst->filepath);
+    $dst = file_save($dst);
+    $input['fid'] = $dst->fid;
+  }
 }
 
 /*********************/
@@ -211,6 +280,7 @@ function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
  * Implements hook_theme().
  */
 function imagefield_crop_theme() {
+  dpm(__FUNCTION__);
   return array(
     'imagefield_crop_widget' => array(
       'render element' => 'element',
@@ -219,6 +289,7 @@ function imagefield_crop_theme() {
 }
 
 function theme_imagefield_crop_widget($variables) {
+  dpm(__FUNCTION__);
   $element = $variables['element'];
   $output = '';
   $output .= '<div class="imagefield-crop-widget form-managed-file clearfix">';
@@ -236,4 +307,29 @@ function theme_imagefield_crop_widget($variables) {
   }
   $output .= drupal_render_children($element);
   return $output;
+}
+
+/*********************/
+/* Internal functions */
+/*********************/
+
+/**
+ * Crop the image and resize it
+ */
+function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL) {
+  $image = image_load($src);
+
+  if ($image) {
+    if ($crop) {
+      image_crop($image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
+    }
+
+    if ($scale) {
+      image_scale_and_crop($image, $scale['width'], $scale['height']);
+    }
+
+    $result = image_close($image, $dst);
+  }
+
+  return $result;
 }
