@@ -252,23 +252,26 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
   //  dpm($element);
   if (!empty($input['fid']) && $input['cropinfo']['changed']) {
     dpm($input);
-    dpm($instance);
 
     // get crop and scale info
     $crop = $input['cropinfo'];
     $instance = field_widget_instance($element, $form_state); // <== Do we need $form_state here?
+    dpm($instance);
     if ($instance['widget']['settings']['resolution']) {
       list($scale['width'], $scale['height']) = explode('x', $instance['widget']['settings']['resolution']);
     }
 
     // get the source file name
     $src = file_load($input['fid']);
-    $dst = $src;
+    $dst = clone $src;
     $dst->fid = 0;
-    $dst->filename .= ".cropped";
-    _imagefield_crop_resize($src->filepath, $crop, $scale, $dst->filepath);
-    $dst = file_save($dst);
-    $input['fid'] = $dst->fid;
+    $dst->uri .= ".cropped";
+    if (_imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale, drupal_realpath($dst->uri))) {
+      $dst = file_save($dst);
+      $input['fid'] = $dst->fid;
+    } else {
+      dpm("crop failed");
+    }
   }
 }
 
@@ -317,19 +320,25 @@ function theme_imagefield_crop_widget($variables) {
  * Crop the image and resize it
  */
 function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL) {
+  dpm(__FUNCTION__);
+  dpm($src);
+  dpm($crop);
+  dpm($scale);
+  dpm($dst);
   $image = image_load($src);
-
   if ($image) {
+    $result = TRUE;
     if ($crop) {
-      image_crop($image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
+      $result = $result && image_crop($image, $crop['x'], $crop['y'], $crop['width'], $crop['height']);
     }
 
     if ($scale) {
-      image_scale_and_crop($image, $scale['width'], $scale['height']);
+      $result = $result && image_scale_and_crop($image, $scale['width'], $scale['height']);
     }
 
-    $result = image_close($image, $dst);
+    $result = $result && image_save($image, $dst);
+    return $result;
   }
 
-  return $result;
+  return FALSE;
 }
