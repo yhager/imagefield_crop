@@ -263,14 +263,19 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
 
     // get the source file name
     $src = file_load($input['fid']);
-    $dst = clone $src;
-    $dst->fid = 0;
-    $dst->uri .= ".cropped";
-    if (_imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale, drupal_realpath($dst->uri))) {
-      $dst = file_save($dst);
-      $input['fid'] = $dst->fid;
-    } else {
-      dpm("crop failed");
+    if ($dst_uri = file_unmanaged_copy($src->uri, $src->uri)) {
+      $dst = clone $src;
+      $dst->fid = 0;
+      $dst->uri = $dst_uri;
+      $dst->filename = basename($dst_uri);
+      if (_imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale, drupal_realpath($dst->uri))) {
+        $dst = file_save($dst);
+        $node = menu_get_object(); // @todo What if this is a new node?
+        file_usage_add($dst, 'imagefield', $instance['entity_type'], $node->nid);
+        $input['fid'] = $dst->fid;
+      } else {
+        dpm("crop failed");
+      }
     }
   }
 }
