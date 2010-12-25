@@ -261,22 +261,19 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
       list($scale['width'], $scale['height']) = explode('x', $instance['widget']['settings']['resolution']);
     }
 
-    // get the source file name
     $src = file_load($input['fid']);
-    if ($dst_uri = file_unmanaged_copy($src->uri, $src->uri)) {
-      $dst = clone $src;
-      $dst->fid = 0;
-      $dst->uri = $dst_uri;
-      $dst->filename = basename($dst_uri);
-      if (_imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale, drupal_realpath($dst->uri))) {
-        $dst = file_save($dst);
-        $node = menu_get_object(); // @todo What if this is a new node?
-        file_usage_add($dst, 'imagefield', $instance['entity_type'], $node->nid);
-        $input['fid'] = $dst->fid;
-      } else {
-        dpm("crop failed");
-      }
+    // Copy the original aside, for future cropping
+    if ($orig_uri = file_unmanaged_copy($src->uri, $src->uri)) {
+      $orig = clone $src;
+      $orig->fid = 0;
+      $orig->uri = $orig_uri;
+      $orig->filename = basename($orig_uri);
+      $orig = file_save($orig);
+      $node = menu_get_object(); // @todo What if this is a new node?
+      file_usage_add($orig, 'imagefield_crop', $instance['entity_type'], $node->nid);
     }
+    // do the crop. @todo check for errors
+    _imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale);
   }
 }
 
@@ -341,7 +338,7 @@ function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL)
       $result = $result && image_scale_and_crop($image, $scale['width'], $scale['height']);
     }
 
-    $result = $result && image_save($image, $dst);
+    $result = $result && image_save($image, $dst ? $dst : $src);
     return $result;
   }
 
