@@ -187,11 +187,11 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
     );
     $element['cropbox'] = array(
       '#type' => 'markup',
-      '#markup' => theme('image', array('path' => $element['#file']->uri, 'attributes' => array('class' => 'cropbox', 'id' => $element['#id'] . '-cropbox'))),
+      '#markup' => theme('image',
+                         array('path' => _imagefield_crop_file_to_crop($element['#file'])->uri,
+                               'attributes' => array('class' => 'cropbox', 'id' => $element['#id'] . '-cropbox'))),
     );
-    //    $element['cropinfo'] = array();
-    $element['cropinfo'] = imagefield_add_cropinfo_fields();
-    //    $element['x'] = array('#title' => 'x', '#type' => 'textfield', '#default_value' => 'ah');
+    $element['cropinfo'] = _imagefield_add_cropinfo_fields();
     list($w, $h) = explode('x', $widget_settings['croparea']);
     $settings = array(
       $element['#id'] => array(
@@ -213,7 +213,7 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   return $element;
 }
 
-function imagefield_add_cropinfo_fields() {
+function _imagefield_add_cropinfo_fields() {
   $defaults = array(
     'x'       => 0,
     'y'       => 0,
@@ -262,8 +262,10 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
     }
 
     $src = file_load($input['fid']);
+    $file_to_crop = _imagefield_crop_file_to_crop($src);
     // Copy the original aside, for future cropping
-    if ($orig_uri = file_unmanaged_copy($src->uri, $src->uri)) {
+    if ($file_to_crop->fid == $src->fid && 
+        $orig_uri = file_unmanaged_copy($src->uri, $src->uri)) {
       $orig = clone $src;
       $orig->fid = 0;
       $orig->uri = $orig_uri;
@@ -273,7 +275,7 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
       file_usage_add($orig, 'imagefield_crop', $instance['entity_type'], $node->nid);
     }
     // do the crop. @todo check for errors
-    _imagefield_crop_resize(drupal_realpath($src->uri), $crop, $scale);
+    _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
   }
 }
 
@@ -343,4 +345,22 @@ function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL)
   }
 
   return FALSE;
+}
+
+function _imagefield_crop_file_to_crop($default) {
+  if ($node = menu_get_object()) {
+    // Try to find the original file for this image
+    $result = db_select('file_usage', 'fu')
+      ->fields('fu', array('fid'))
+      ->condition('module', 'imagefield_crop')
+      ->condition('type', 'node')
+      ->condition('id', $node->nid)
+      ->condition('count', 0, '>')
+      ->range(0,1)
+      ->execute();
+    if ($row = $result->fetch()) {
+      return file_load($row->fid);
+    }
+  }
+  return $default;
 }
