@@ -158,8 +158,7 @@ function imagefield_crop_field_widget_form(&$form, &$form_state, $field, $instan
  * An element #process callback for the imagefield_crop field type.
  */
 function imagefield_crop_widget_process($element, &$form_state, $form) {
-  dpm(__FUNCTION__);
-  //dpm($element);
+  dpm(array(__FUNCTION__, $element));
   $item = $element['#value'];
   $item['fid'] = $element['fid']['#value'];
 
@@ -248,7 +247,7 @@ function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
  */
 function imagefield_crop_widget_value(&$element, &$input, $form_state) {
   // set $input['fid'] and that will be the value of the element
-  dpm(__FUNCTION__);
+  //  dpm(array(__FUNCTION__) + func_get_args());
   //  dpm($element);
   if (!empty($input['fid']) && $input['cropinfo']['changed']) {
     dpm($input);
@@ -271,8 +270,7 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
       $orig->uri = $orig_uri;
       $orig->filename = basename($orig_uri);
       $orig = file_save($orig);
-      $node = menu_get_object(); // @todo What if this is a new node?
-      file_usage_add($orig, 'imagefield_crop', $instance['entity_type'], $node->nid);
+      file_usage_add($orig, 'imagefield_crop', 'file', $src->fid);
     }
     // do the crop. @todo check for errors
     _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
@@ -348,19 +346,17 @@ function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL)
 }
 
 function _imagefield_crop_file_to_crop($default) {
-  if ($node = menu_get_object()) {
-    // Try to find the original file for this image
-    $result = db_select('file_usage', 'fu')
-      ->fields('fu', array('fid'))
-      ->condition('module', 'imagefield_crop')
-      ->condition('type', 'node')
-      ->condition('id', $node->nid)
-      ->condition('count', 0, '>')
-      ->range(0,1)
-      ->execute();
-    if ($row = $result->fetch()) {
-      return file_load($row->fid);
-    }
+  // Try to find the original file for this image
+  $result = db_select('file_usage', 'fu')
+    ->fields('fu', array('fid'))
+    ->condition('module', 'imagefield_crop')
+    ->condition('type', 'file')
+    ->condition('id', $default->fid)
+    ->condition('count', 0, '>')
+    ->range(0,1)
+    ->execute();
+  if ($row = $result->fetch()) {
+    return file_load($row->fid);
   }
   return $default;
 }
