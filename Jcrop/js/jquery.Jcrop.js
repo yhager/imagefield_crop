@@ -1,8 +1,8 @@
 /**
- * jquery.Jcrop.js v0.9.8
+ * jquery.Jcrop.js v0.9.9
  * jQuery Image Cropping Plugin
  * @author Kelly Hallman <khallman@gmail.com>
- * Copyright (c) 2008-2009 Kelly Hallman - released under MIT License {{{
+ * Copyright (c) 2008-2010 Kelly Hallman - released under MIT License {{{
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,7 @@ $.Jcrop = function(obj,opt)
 
 	// Sanitize some options {{{
 	var obj = obj, opt = opt;
+	var myself = this;
 
 	if (typeof(obj) !== 'object') obj = $(obj)[0];
 	if (typeof(opt) !== 'object') opt = { };
@@ -66,10 +67,8 @@ $.Jcrop = function(obj,opt)
 		borderOpacity:		.4,
 		handleOpacity:		.5,
 
-		handlePad:			5,
 		handleSize:			9,
 		handleOffset:		5,
-		edgeMargin:			14,
 
 		aspectRatio:		0,
 		keySupport:			true,
@@ -80,14 +79,14 @@ $.Jcrop = function(obj,opt)
 
 		boxWidth:			0,
 		boxHeight:			0,
-
-		boundary:			8,
+		boundary:			3,
 		animationDelay:		20,
 		swingSpeed:			3,
 
 		allowSelect:		true,
 		allowMove:			true,
 		allowResize:		true,
+		fadeTime:			400,
 
 		minSelect:			[ 0, 0 ],
 		maxSize:			[ 0, 0 ],
@@ -104,8 +103,19 @@ $.Jcrop = function(obj,opt)
 	// }}}
 	// Initialize some jQuery objects {{{
 
+	// The values are SET on the image(s) for the interface
+	// If the original image has any of these set, they will be reset
+	// However, if you destroy() the Jcrop instance the original image's
+	// character in the DOM will be as you left it.
+	var img_css = {
+		border: 'none',
+		margin: 0,
+		padding: 0,
+		position: 'absolute'
+	};
+
 	var $origimg = $(obj);
-	var $img = $origimg.clone().removeAttr('id').css({ position: 'absolute' });
+	var $img = $origimg.clone().removeAttr('id').css(img_css);
 
 	$img.width($origimg.width());
 	$img.height($origimg.height());
@@ -124,13 +134,13 @@ $.Jcrop = function(obj,opt)
 				backgroundColor: options.bgColor
 			}).insertAfter($origimg).append($img);
 	;
-	
+
+	delete(options.bgColor);
 	if (options.addClass) $div.addClass(options.addClass);
-	//$img.wrap($div);
 
 	var $img2 = $('<img />')/*{{{*/
 			.attr('src',$img.attr('src'))
-			.css('position','absolute')
+			.css(img_css)
 			.width(boundx).height(boundy)
 	;/*}}}*/
 	var $img_holder = $('<div />')/*{{{*/
@@ -163,6 +173,7 @@ $.Jcrop = function(obj,opt)
 	/* }}} */
 	// Set more variables {{{
 
+	var bgopacity = options.bgOpacity;
 	var xlimit, ylimit, xmin, ymin;
 	var xscale, yscale, enabled = true;
 	var docOffset = getPos($img),
@@ -171,7 +182,6 @@ $.Jcrop = function(obj,opt)
 		shift_down;
 
 	// }}}
-		
 
 		// }}}
 	// Internal Modules {{{
@@ -326,7 +336,7 @@ $.Jcrop = function(obj,opt)
 				yy = boundy;
 			}
 
-			return last = makeObj(flipCoords(x1,y1,xx,yy));
+			return makeObj(flipCoords(x1,y1,xx,yy));
 		};
 		/*}}}*/
 		function rebound(p)/*{{{*/
@@ -415,8 +425,8 @@ $.Jcrop = function(obj,opt)
 		// Insert border divs for outline
 		if (options.drawBorders) {
 			borders = {
-					top: insertBorder('hline')
-						.css('top',$.browser.msie?px(-1):px(0)),
+					top: insertBorder('hline'),
+						//.css('top',$.browser.msie?px(-1):px(0)),
 					bottom: insertBorder('hline'),
 					left: insertBorder('vline'),
 					right: insertBorder('vline')
@@ -474,9 +484,8 @@ $.Jcrop = function(obj,opt)
 		function insertDragbar(ord)/*{{{*/
 		{
 			var s = options.handleSize,
-				o = hhs,
 				h = s, w = s,
-				t = o, l = o;
+				t = hhs, l = hhs;
 
 			switch(ord)
 			{
@@ -490,7 +499,7 @@ $.Jcrop = function(obj,opt)
 		/*}}}*/
 		function createHandles(li)/*{{{*/
 		{
-			for(i in li) handle[li[i]] = insertHandle(li[i]);
+			for(var i=0; i< li.length; i++) handle[li[i]] = insertHandle(li[i]);
 		};
 		/*}}}*/
 		function moveHandles(c)/*{{{*/
@@ -558,13 +567,13 @@ $.Jcrop = function(obj,opt)
 			seehandles && moveHandles(c);
 			awake || show();
 
-			options.onChange(unscale(c));
+			options.onChange.call(api,unscale(c));
 		};
 		/*}}}*/
 		function show()/*{{{*/
 		{
 			$sel.show();
-			$img.css('opacity',options.bgOpacity);
+			$img.css('opacity',bgopacity);
 			awake = true;
 		};
 		/*}}}*/
@@ -614,8 +623,9 @@ $.Jcrop = function(obj,opt)
 		};
 		/*}}}*/
 
-		var $track = newTracker().mousedown(createDragger('move'))
-				.css({ cursor: 'move', position: 'absolute', zIndex: 360 })
+		var $track = newTracker()
+				.mousedown(createDragger('move'))
+				.css({ cursor: 'move', position: 'absolute', zIndex: 360 });
 
 		$img_holder.append($track);
 		disableHandles();
@@ -625,6 +635,7 @@ $.Jcrop = function(obj,opt)
 			update: update,
 			release: release,
 			refresh: refresh,
+			isAwake: function() { return awake; },
 			setCursor: function (cursor) { $track.css('cursor',cursor); },
 			enableHandles: enableHandles,
 			enableOnly: function() { seehandles = true; },
@@ -689,7 +700,8 @@ $.Jcrop = function(obj,opt)
 				btndown = false;
 
 				onDone(mouseAbs(e));
-				options.onSelect(unscale(Coords.getFixed()));
+				//options.onSelect(unscale(Coords.getFixed()));
+				options.onSelect.call(api,unscale(Coords.getFixed()));
 				toBack();
 				onMove = function() { };
 				onDone = function() { };
@@ -774,7 +786,7 @@ $.Jcrop = function(obj,opt)
 				case 9: return true;
 			}
 
-			return nothing(e);
+			return false;
 		};
 		/*}}}*/
 		
@@ -791,6 +803,7 @@ $.Jcrop = function(obj,opt)
 	function px(n) { return '' + parseInt(n) + 'px'; };
 	function pct(n) { return '' + parseInt(n) + '%'; };
 	function cssClass(cl) { return options.baseClass + '-' + cl; };
+	function supportsColorFade() { return 'backgroundColor' in $.fx.step; };
 	function getPos(obj)/*{{{*/
 	{
 		// Updated in v0.9.4 to use built-in dimensions plugin
@@ -808,7 +821,6 @@ $.Jcrop = function(obj,opt)
 		if (type != lastcurs)
 		{
 			Tracker.setCursor(type);
-			//Handles.xsetCursor(type);
 			lastcurs = type;
 		}
 	};
@@ -947,9 +959,9 @@ $.Jcrop = function(obj,opt)
 		myCursor('crosshair');
 		var pos = mouseAbs(e);
 		Coords.setPressed(pos);
+		Selection.update();
 		Tracker.activateHandlers(selectDrag,doneSelect);
 		KeyManager.watchKeys();
-		Selection.update();
 
 		e.stopPropagation();
 		e.preventDefault();
@@ -962,22 +974,30 @@ $.Jcrop = function(obj,opt)
 		Selection.update();
 	};
 	/*}}}*/
-	function newTracker()
+	function newTracker()/*{{{*/
 	{
 		var trk = $('<div></div>').addClass(cssClass('tracker'));
 		$.browser.msie && trk.css({ opacity: 0, backgroundColor: 'white' });
 		return trk;
 	};
+	/*}}}*/
 
 	// }}}
 	// API methods {{{
 		
-	function animateTo(a)/*{{{*/
+	function setClass(cname)/*{{{*/
 	{
-		var x1 = a[0] / xscale,
-			y1 = a[1] / yscale,
-			x2 = a[2] / xscale,
-			y2 = a[3] / yscale;
+		$div.removeClass()
+			.addClass(cssClass('holder'))
+			.addClass(cname);
+	}
+	;/*}}}*/
+	function animateTo(a,callback)/*{{{*/
+	{
+		var x1 = parseInt(a[0]) / xscale,
+			y1 = parseInt(a[1]) / yscale,
+			x2 = parseInt(a[2]) / xscale,
+			y2 = parseInt(a[3]) / yscale;
 
 		if (animating) return;
 
@@ -998,6 +1018,7 @@ $.Jcrop = function(obj,opt)
 		var velocity = options.swingSpeed;
 
 		Selection.animMode(true);
+		var anim_timer;
 
 		var animator = function()
 		{
@@ -1010,24 +1031,31 @@ $.Jcrop = function(obj,opt)
 				animat[2] = x2 + ((pcent / 100) * ix2);
 				animat[3] = y2 + ((pcent / 100) * iy2);
 
-				if (pcent < 100) animateStart();
-					else Selection.done();
-
 				if (pcent >= 99.8) pcent = 100;
+				if (pcent < 100)
+				{
+					setSelectRaw(animat);
+				}
+				else {
+					clearInterval(anim_timer);
+					Selection.done();
+					if (typeof(callback)=='function') callback.call(api);
+				}
 
-				setSelectRaw(animat);
 			};
 		}();
 
-		function animateStart()
-			{ window.setTimeout(animator,interv); };
-
-		animateStart();
+		anim_timer = setInterval(animator,interv);
 	};
 	/*}}}*/
 	function setSelect(rect)//{{{
 	{
-		setSelectRaw([rect[0]/xscale,rect[1]/yscale,rect[2]/xscale,rect[3]/yscale]);
+		setSelectRaw([
+			parseInt(rect[0])/xscale,
+			parseInt(rect[1])/yscale,
+			parseInt(rect[2])/xscale,
+			parseInt(rect[3])/yscale
+		]);
 	};
 	//}}}
 	function setSelectRaw(l) /*{{{*/
@@ -1090,9 +1118,36 @@ $.Jcrop = function(obj,opt)
 	{
 		$div.remove();
 		$origimg.show();
+		$(obj).removeData('Jcrop');
 	};
 	//}}}
+	function setImage(src,callback)//{{{
+	{
+		Selection.release();
+		disableCrop();
+		var img = new Image();
+		img.onload = function()
+		{
+			var iw = img.width;
+			var ih = img.height;
+			var bw = options.boxWidth;
+			var bh = options.boxHeight;
+			$img.width(iw).height(ih);
+			$img.attr('src',src);
+			$img2.attr('src',src);
+			presize($img,bw,bh);
+			boundx = $img.width();
+			boundy = $img.height();
+			$img2.width(boundx).height(boundy);
+			$trk.width(boundx+(bound*2)).height(boundy+(bound*2));
+			$div.width(boundx).height(boundy);
+			enableCrop();
 
+			(typeof(callback) == 'function') && callback.call(api);
+		};
+		img.src = src;
+	};
+	//}}}
 	function interfaceUpdate(alt)//{{{
 	// This method tweaks the interface based on options object.
 	// Called when options are changed and at end of initialization.
@@ -1104,10 +1159,9 @@ $.Jcrop = function(obj,opt)
 		Tracker.setCursor( options.allowSelect? 'crosshair': 'default' );
 		Selection.setCursor( options.allowMove? 'move': 'default' );
 
-		$div.css('backgroundColor',options.bgColor);
 
 		if ('setSelect' in options) {
-			setSelect(opt.setSelect);
+			setSelect(options.setSelect);
 			Selection.done();
 			delete(options.setSelect);
 		}
@@ -1116,6 +1170,24 @@ $.Jcrop = function(obj,opt)
 			xscale = options.trueSize[0] / boundx;
 			yscale = options.trueSize[1] / boundy;
 		}
+		if ('bgColor' in options) {
+
+			(supportsColorFade() && options.fadeTime) ?
+				$div.animate({backgroundColor: options.bgColor},
+					{queue:false,duration:options.fadeTime}) :
+				$div.css('backgroundColor',options.bgColor);
+
+			delete(options.bgColor);
+		};
+		if ('bgOpacity' in options) {
+			bgopacity = options.bgOpacity;
+
+			if (Selection.isAwake())
+				(options.fadeTime) ? $img.fadeTo(options.fadeTime,bgopacity):
+					$div.css('opacity',options.opacity);
+
+			delete(options.bgOpacity);
+		};
 
 		xlimit = options.maxSize[0] || 0;
 		ylimit = options.maxSize[1] || 0;
@@ -1138,23 +1210,31 @@ $.Jcrop = function(obj,opt)
 	interfaceUpdate(true);
 	
 	var api = {
+
+		setImage: setImage,
 		animateTo: animateTo,
 		setSelect: setSelect,
 		setOptions: setOptionsNew,
 		tellSelect: tellSelect,
 		tellScaled: tellScaled,
+		setClass: setClass,
 
 		disable: disableCrop,
 		enable: enableCrop,
 		cancel: cancelCrop,
+		release: Selection.release,
+		destroy: destroy,
 
 		focus: KeyManager.watchKeys,
 
 		getBounds: function() { return [ boundx * xscale, boundy * yscale ]; },
 		getWidgetSize: function() { return [ boundx, boundy ]; },
+		getScaleFactor: function() { return [ xscale, yscale ]; },
 
-		release: Selection.release,
-		destroy: destroy
+		ui: {
+			holder: $div,
+			selection: $sel
+		}
 
 	};
 
@@ -1162,17 +1242,23 @@ $.Jcrop = function(obj,opt)
 	return api;
 };
 
-$.fn.Jcrop = function(options)/*{{{*/
+$.fn.Jcrop = function(options,callback)/*{{{*/
 {
+
 	function attachWhenDone(from)/*{{{*/
 	{
-		var loadsrc = options.useImg || from.src;
+		var opt = (typeof(options) == 'object') ? options : { };
+		var loadsrc = opt.useImg || from.src;
 		var img = new Image();
-		img.onload = function() { $.Jcrop(from,options); };
+		img.onload = function() {
+			var api = $.Jcrop(from,opt);
+
+			(typeof(callback) == 'function') &&
+				callback.call(api);
+		};
 		img.src = loadsrc;
 	};
 	/*}}}*/
-	if (typeof(options) !== 'object') options = { };
 
 	// Iterate over each object, attach Jcrop
 	this.each(function()
