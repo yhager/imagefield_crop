@@ -179,9 +179,10 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   if ($element['#file']) {
 
     $file_to_crop = _imagefield_crop_file_to_crop($element['#file']);
+
     $element['preview'] = array(
-      '#file' => $file_to_crop,
       '#type' => 'markup',
+      '#file' => $file_to_crop, // This is used by the #process function
       '#process' => array('imagefield_crop_widget_preview_process'),
       '#theme' => 'imagefield_crop_preview',
       '#markup' => 'This is coming from the widget #process',
@@ -211,7 +212,6 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
       'type' => 'setting',
       'scope' => 'header',
       );
-
   }
   return $element;
 }
@@ -241,7 +241,42 @@ function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
   // add here js needed for preview area
   dpm(__FUNCTION__);
   $element['#markup'] = "This markup is from the preview #process";
-  dpm($element);
+  //  return $element;
+  $file = $element['#file'];
+  if ($file->fid == 0) {
+    return $element;
+  }
+  // The widget belongs to the parent, so we got to find it first
+  $parents = array_slice($element['#array_parents'], 0, -1);
+  $parent = drupal_array_get_nested_value($form, $parents);
+  $instance = field_widget_instance($parent, $form_state);
+  if ($instance['widget']['settings']['resolution']) {
+    list($width, $height) = explode('x', $instance['widget']['settings']['resolution']);
+  }
+
+  $image_info = image_get_info(drupal_realpath($file->uri));
+  $settings = array(
+    $parent['#id'] => array(
+      'preview' => array(
+        'orig_width' => $image_info['width'],
+        'orig_height' => $image_info['height'],
+        'width' => (integer)$width,
+        'height' => (integer)$height,
+      ),
+    ),
+  );
+
+  $element['#attached']['js'][] = array(
+    'data' => array('imagefield_crop' => $settings),
+    'type' => 'setting',
+    'scope' => 'header',
+  );
+  $element['#imagefield_crop'] = array (
+    '#file' => $file,
+    '#width' => $width,
+    '#height' => $height,
+    '#path' => file_create_url($file->uri),
+    );
   return $element;
 }
 
@@ -252,15 +287,11 @@ function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
  */
 function imagefield_crop_widget_value(&$element, &$input, $form_state) {
   // set $input['fid'] and that will be the value of the element
-  //  dp(armray(__FUNCTION__) + func_get_args());
-  //  dpm($element);
   if (!empty($input['fid']) && $input['cropinfo']['changed']) {
-    //    dpm($input);
 
     // get crop and scale info
     $crop = $input['cropinfo'];
-    $instance = field_widget_instance($element, $form_state); // <== Do we need $form_state here?
-    //    dpm($instance);
+    $instance = field_widget_instance($element, $form_state);
     if ($instance['widget']['settings']['resolution']) {
       list($scale['width'], $scale['height']) = explode('x', $instance['widget']['settings']['resolution']);
     }
@@ -307,9 +338,9 @@ function theme_imagefield_crop_widget($variables) {
 
   //$output .= '<pre>' . print_r($element['#attached'],1) . '</pre>';
   if (isset($element['preview'])) {
-    $output .= 'BEGIN PREVIEW<div class="imagfield-crop-preview">';
+    $output .= '<div class="imagefield-crop-preview">';
     $output .= drupal_render($element['preview']);
-    $output .= '</div>END PREVIEW';
+    $output .= '</div>';
   }
   if (isset($element['cropbox'])) {
     $output .= '<div class="imagefield-crop-cropbox">';
@@ -322,13 +353,11 @@ function theme_imagefield_crop_widget($variables) {
 
 function theme_imagefield_crop_preview($variables) {
   dpm(__FUNCTION__);
-  $element = $variables['element'];
-  dpm($element);
-  return '@@' . $element['#markup'] . drupal_render_children($element);
-  //  return "FILE URI IS " . $variables['file']['uri'];
-  //  dpm(array(__FUNCTION__, $variables));
-  //  $element = $variables['element'];
-  //  return '@@'. drupal_render($element) . '@@';
+  $info = $variables['element']['#imagefield_crop'];
+  $output = '<div class="jcrop-preview-wrapper" style="width:'. $info['#width'] .'px;height:'. $info['#height'] .'px;overflow:hidden;">';
+  $output .= theme('image', array('path' => $info['#path'], 'alt' => 'jcrop-preview', 'attributes' => array('class' => 'jcrop-preview')));
+  $output .= '</div>';
+  return $output;
 }
 
 /*********************/
@@ -340,10 +369,6 @@ function theme_imagefield_crop_preview($variables) {
  */
 function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL) {
   dpm(__FUNCTION__);
-  //  dpm($src);
-  //  dpm($crop);
-  //  dpm($scale);
-  //  dpm($dst);
   $image = image_load($src);
   if ($image) {
     $result = TRUE;

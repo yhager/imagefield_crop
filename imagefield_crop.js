@@ -3,7 +3,7 @@
 
 
 Drupal.behaviors.imagefield_crop = {
-  attach: function (context, settings) { 
+  attach: function (context, settings) {
     // wait till 'fadeIn' effect ends (defined in filefield_widget.inc)
     setTimeout(attachJcrop, 1000, context);
     //attachJcrop(context);
@@ -29,7 +29,7 @@ Drupal.behaviors.imagefield_crop = {
 
         $(this).Jcrop({
           onChange: function(c) {
-            var preview = widget.parent().find('.widget-preview');
+            var preview = $('.imagefield-crop-preview', widget);
             // skip newly added blank fields
             if (undefined == settings.imagefield_crop[id].preview) {
               return;
@@ -53,7 +53,6 @@ Drupal.behaviors.imagefield_crop = {
           aspectRatio: settings.imagefield_crop[id].box.ratio,
           boxWidth: settings.imagefield_crop[id].box.box_width,
           boxHeight: settings.imagefield_crop[id].box.box_height,
-
           setSelect: [
             parseInt($(".edit-image-crop-x", widget).val()),
             parseInt($(".edit-image-crop-y", widget).val()),
