@@ -167,8 +167,8 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
 
   $settings = $instance['settings'];
   $widget_settings = $instance['widget']['settings'];
-  //var_dump(explode('x', $widget_settings['resolution']));
   $element['#theme'] = 'imagefield_crop_widget';
+  $element['#description'] = t('Click on the image and drag to mark how the image will be cropped');
 
   $path = drupal_get_path('module', 'imagefield_crop');
   $element['#attached']['js'][] = "$path/Jcrop/js/jquery.Jcrop.js";
@@ -177,7 +177,6 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   $element['#attached']['css'][] = "$path/Jcrop/css/jquery.Jcrop.css";
 
   if ($element['#file']) {
-
     $file_to_crop = _imagefield_crop_file_to_crop($element['#file']);
 
     $element['preview'] = array(
@@ -185,8 +184,10 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
       '#file' => $file_to_crop, // This is used by the #process function
       '#process' => array('imagefield_crop_widget_preview_process'),
       '#theme' => 'imagefield_crop_preview',
-      '#markup' => 'This is coming from the widget #process',
-      //'#markup' => theme('image_style', array('style_name' => $widget_settings['preview_image_style'], 'path' => $file_to_crop->uri, 'getsize' => FALSE)),
+      '#markup' => theme('image', array(
+                           'path' => $element['#file']->uri,
+                           'getsize' => FALSE,
+                           'attributes' => array('class' => 'preview-existing'))),
     );
     $element['cropbox'] = array(
       '#markup' => theme('image', array(
@@ -227,7 +228,7 @@ function _imagefield_add_cropinfo_fields() {
 
   foreach ($defaults as $name => $default) {
     $element[$name] = array(
-      '#type' => 'textfield',
+      '#type' => 'hidden',
       '#title' => $name,
       '#attributes' => array('class' => array('edit-image-crop-'. $name)),
       '#default_value' => $default,
@@ -238,10 +239,7 @@ function _imagefield_add_cropinfo_fields() {
 
 
 function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
-  // add here js needed for preview area
   dpm(__FUNCTION__);
-  $element['#markup'] = "This markup is from the preview #process";
-  //  return $element;
   $file = $element['#file'];
   if ($file->fid == 0) {
     return $element;
@@ -272,7 +270,7 @@ function imagefield_crop_widget_preview_process($element, &$form_state, $form) {
     'scope' => 'header',
   );
   $element['#imagefield_crop'] = array (
-    '#file' => $file,
+    '#file' => $element['#file'],
     '#width' => $width,
     '#height' => $height,
     '#path' => file_create_url($file->uri),
@@ -309,6 +307,10 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
       file_usage_add($orig, 'imagefield_crop', 'file', $src->fid);
     }
     // do the crop. @todo check for errors
+    // This worked in D6, doesn't work in D7
+    // // Save crop data to the database
+    // $src->imagefield_crop = array('crop' => $crop);
+    // file_save($src);
     _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
   }
 }
@@ -355,7 +357,8 @@ function theme_imagefield_crop_preview($variables) {
   dpm(__FUNCTION__);
   $info = $variables['element']['#imagefield_crop'];
   $output = '<div class="jcrop-preview-wrapper" style="width:'. $info['#width'] .'px;height:'. $info['#height'] .'px;overflow:hidden;">';
-  $output .= theme('image', array('path' => $info['#path'], 'alt' => 'jcrop-preview', 'attributes' => array('class' => 'jcrop-preview')));
+  $output .= $variables['element']['#markup'];
+  $output .= theme('image', array('path' => $info['#path'], 'alt' => 'jcrop-preview', 'attributes' => array('class' => 'jcrop-preview', 'style' => 'display:none')));
   $output .= '</div>';
   return $output;
 }
