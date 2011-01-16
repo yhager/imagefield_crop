@@ -177,7 +177,7 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   $element['#attached']['css'][] = "$path/Jcrop/css/jquery.Jcrop.css";
 
   if ($element['#file']) {
-    $file_to_crop = _imagefield_crop_file_to_crop($element['#file']);
+    $file_to_crop = _imagefield_crop_file_to_crop($element['#file']->fid);
 
     $element['preview'] = array(
       '#type' => 'markup',
@@ -295,7 +295,7 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
     }
 
     $src = file_load($input['fid']);
-    $file_to_crop = _imagefield_crop_file_to_crop($src);
+    $file_to_crop = _imagefield_crop_file_to_crop($src->fid);
     // Copy the original aside, for future cropping
     if ($file_to_crop->fid == $src->fid &&
         $orig_uri = file_unmanaged_copy($src->uri, $src->uri)) {
@@ -312,6 +312,32 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
     // $src->imagefield_crop = array('crop' => $crop);
     // file_save($src);
     _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
+  }
+}
+
+/* Implements hook_field_attach_delete(). */
+function imagefield_crop_field_attach_delete($entity_type, $entity) {
+  dpm(__FUNCTION__);
+  list(, , $bundle) = entity_extract_ids($entity_type, $entity);
+  $instances = _field_invoke_get_instances($entity_type, $bundle, array('default' => FALSE, 'deleted' => FALSE, 'language' => NULL));
+
+  foreach ($instances as $instance) {
+    $field_name = $instance['field_name'];
+    $field = field_info_field($field_name);
+    if ($field['type'] == 'image') {
+      $available_languages = field_available_languages($entity_type, $field);
+      $languages = _field_language_suggestion($available_languages, NULL, $field_name);
+      foreach ($languages as $langcode) {
+        $items = isset($entity->{$field_name}[$langcode]) ? $entity->{$field_name}[$langcode] : array();
+        foreach ($items as $delta => $item) {
+          $orig = _imagefield_crop_file_to_crop($item['fid']);
+          if ($orig->fid != $item['fid']) {
+            file_usage_delete($orig, 'imagefield_crop');
+            file_delete($orig);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -390,18 +416,18 @@ function _imagefield_crop_resize($src, $crop = NULL, $scale = NULL, $dst = NULL)
   return FALSE;
 }
 
-function _imagefield_crop_file_to_crop($default) {
+function _imagefield_crop_file_to_crop($fid) {
   // Try to find the original file for this image
   $result = db_select('file_usage', 'fu')
     ->fields('fu', array('fid'))
     ->condition('module', 'imagefield_crop')
     ->condition('type', 'file')
-    ->condition('id', $default->fid)
+    ->condition('id', $fid)
     ->condition('count', 0, '>')
     ->range(0,1)
     ->execute();
   if ($row = $result->fetch()) {
-    return file_load($row->fid);
+    $fid = $row->fid;
   }
-  return $default;
+  return file_load($fid);
 }
