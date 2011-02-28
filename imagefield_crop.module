@@ -196,7 +196,7 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
             'class' => 'cropbox',
             'id' => $element['#id'] . '-cropbox'))),
     );
-    $element['cropinfo'] = _imagefield_add_cropinfo_fields();
+    $element['cropinfo'] = _imagefield_add_cropinfo_fields($element['#file']->fid);
     list($w, $h) = explode('x', $widget_settings['croparea']);
     $settings = array(
       $element['#id'] => array(
@@ -217,7 +217,7 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
   return $element;
 }
 
-function _imagefield_add_cropinfo_fields() {
+function _imagefield_add_cropinfo_fields($fid = NULL) {
   $defaults = array(
     'x'       => 0,
     'y'       => 0,
@@ -225,6 +225,12 @@ function _imagefield_add_cropinfo_fields() {
     'height'  => 50,
     'changed' => 0,
   );
+  if($fid) {
+  	$crop_info = variable_get('imagefield_crop_info', array());
+  	if(isset($crop_info[$fid]) && !empty($crop_info[$fid])) {
+  		$defaults = $crop_info[$fid];
+  	}
+  }
 
   foreach ($defaults as $name => $default) {
     $element[$name] = array(
@@ -311,6 +317,9 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
     // // Save crop data to the database
     // $src->imagefield_crop = array('crop' => $crop);
     // file_save($src);
+    $crop_info = variable_get('imagefield_crop_info', array());
+    $crop_info[$src->fid] = $crop;
+    variable_set('imagefield_crop_info', $crop_info);
     _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
   }
 }
