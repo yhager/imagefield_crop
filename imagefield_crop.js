@@ -13,7 +13,8 @@ Drupal.behaviors.imagefield_crop = {
         // no cropbox, probably an image upload (http://drupal.org/node/366296)
         return;
       }
-      $('.cropbox', context).each(function() {
+      // add Jcrop exactly once to each cropbox
+      $('.cropbox', context).once(function() {
         var self = $(this);
 
         //alert("found a cropbox" + self.attr('id'));
@@ -58,15 +59,12 @@ Drupal.behaviors.imagefield_crop = {
           aspectRatio: settings.imagefield_crop[id].box.ratio,
           boxWidth: settings.imagefield_crop[id].box.box_width,
           boxHeight: settings.imagefield_crop[id].box.box_height,
-          /*
-           * Setting the select here calls onChange event, and we lose the original image visibility
           setSelect: [
             parseInt($(".edit-image-crop-x", widget).val()),
             parseInt($(".edit-image-crop-y", widget).val()),
             parseInt($(".edit-image-crop-width", widget).val()) + parseInt($(".edit-image-crop-x", widget).val()),
             parseInt($(".edit-image-crop-height", widget).val()) + parseInt($(".edit-image-crop-y", widget).val())
           ]
-*/
         });
       });
     };
