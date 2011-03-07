@@ -366,6 +366,9 @@ function imagefield_crop_widget_delete($form, &$form_state) {
 	if($orig->fid != $element['fid']) {
 		file_usage_delete($orig, 'imagefield_crop');
 		file_delete($orig);
+	  $crop_info = variable_get('imagefield_crop_info', array());
+	  unset($crop_info[$element['fid']]);
+	  variable_set('imagefield_crop_info', $crop_info);
 	}
 }
 
