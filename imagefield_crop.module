@@ -220,7 +220,6 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
     $element['cropinfo'] = _imagefield_add_cropinfo_fields($element['#file']->fid);
     list($res_w, $res_h) = explode('x', $widget_settings['resolution']);
     list($crop_w, $crop_h) = explode('x', $widget_settings['croparea']);
-    dpm(array('crop_w' => $crop_w, 'crop_h' => $crop_h));
     $settings = array(
       $element['#id'] => array(
         'box' => array(
@@ -241,6 +240,10 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
       'scope' => 'header',
       );
   }
+  
+  // prepend submit handler to remove button
+  array_unshift($element['remove_button']['#submit'], 'imagefield_crop_widget_delete');
+  
   return $element;
 }
 
@@ -255,7 +258,7 @@ function _imagefield_add_cropinfo_fields($fid = NULL) {
   if($fid) {
   	$crop_info = variable_get('imagefield_crop_info', array());
   	if(isset($crop_info[$fid]) && !empty($crop_info[$fid])) {
-  		$defaults = $crop_info[$fid];
+  		$defaults = array_merge($defaults,$crop_info[$fid]);
   	}
   }
 
@@ -344,37 +347,26 @@ function imagefield_crop_widget_value(&$element, &$input, $form_state) {
     // // Save crop data to the database
     // $src->imagefield_crop = array('crop' => $crop);
     // file_save($src);
-    $crop_info = variable_get('imagefield_crop_info', array());
-    $crop_info[$src->fid] = $crop;
-    variable_set('imagefield_crop_info', $crop_info);
-    _imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri));
+    
+    if(_imagefield_crop_resize(drupal_realpath($file_to_crop->uri), $crop, $scale, drupal_realpath($src->uri))) {
+		  // insert crop info for this image in imagefield_crop_info variable
+		  $crop_info = variable_get('imagefield_crop_info', array());
+		  unset($crop['changed']);
+		  $crop_info[$src->fid] = $crop;
+		  variable_set('imagefield_crop_info', $crop_info);
+		}
+    
   }
 }
 
-/* Implements hook_field_attach_delete(). */
-function imagefield_crop_field_attach_delete($entity_type, $entity) {
-  //dpm(__FUNCTION__);
-  list(, , $bundle) = entity_extract_ids($entity_type, $entity);
-  $instances = _field_invoke_get_instances($entity_type, $bundle, array('default' => FALSE, 'deleted' => FALSE, 'language' => NULL));
-
-  foreach ($instances as $instance) {
-    $field_name = $instance['field_name'];
-    $field = field_info_field($field_name);
-    if ($field['type'] == 'image') {
-      $available_languages = field_available_languages($entity_type, $field);
-      $languages = _field_language_suggestion($available_languages, NULL, $field_name);
-      foreach ($languages as $langcode) {
-        $items = isset($entity->{$field_name}[$langcode]) ? $entity->{$field_name}[$langcode] : array();
-        foreach ($items as $delta => $item) {
-          $orig = _imagefield_crop_file_to_crop($item['fid']);
-          if ($orig->fid != $item['fid']) {
-            file_usage_delete($orig, 'imagefield_crop');
-            file_delete($orig);
-          }
-        }
-      }
-    }
-  }
+function imagefield_crop_widget_delete($form, &$form_state) {
+	$parents = array_slice($form_state['triggering_element']['#array_parents'], 0, -1);
+  $element = drupal_array_get_nested_value($form_state['values'], $parents);
+	$orig = _imagefield_crop_file_to_crop($element['fid']);
+	if($orig->fid != $element['fid']) {
+		file_usage_delete($orig, 'imagefield_crop');
+		file_delete($orig);
+	}
 }
 
 /*********************/
