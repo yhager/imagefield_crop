@@ -15,6 +15,7 @@ function imagefield_crop_field_widget_info() {
         'collapsible' => 2,
         'resolution' => '200x150',
         'enforce_ratio' => true,
+        'enforce_minimum' => true,
         'croparea' => '500x500',
       ),
       'behaviors' => array(
@@ -78,6 +79,13 @@ function imagefield_crop_field_widget_settings_form($field, $instance) {
     '#description' => t('Check this to force the ratio of the output on the crop box. NOTE: If you leave this unchecked but enforce an output resolution, the final image might be distorted'),
     '#element_validate' => array('_imagefield_crop_widget_enforce_ratio_validate'),
   );
+  $form['enforce_minimum'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enforce minimum crop size based on the output size'),
+    '#default_value' => $settings['enforce_ratio'],
+    '#description' => t('Check this to force a minimum cropping selection equal to the output size. NOTE: If you leave this unchecked you might get zoomed pixels if the cropping area is smaller than the output resolution.'),
+    '#element_validate' => array('_imagefield_crop_widget_enforce_minimum_validate'),
+  );
 
   // Crop area settings
   $croparea = explode('x', $settings['croparea']) + array('', '');
@@ -123,6 +131,19 @@ function _imagefield_crop_widget_enforce_ratio_validate($element, &$form_state) 
     drupal_set_message(t('Output resolution is defined, but not enforced. Final images might be distroted'));
   }
 }
+
+function _imagefield_crop_widget_enforce_minimum_validate($element, &$form_state) {
+  $settings = $form_state['values']['instance']['widget']['settings'];
+  $rw = ($settings['resolution']['x']) ? $settings['resolution']['x'] : 0;
+  $rh = ($settings['resolution']['y']) ? $settings['resolution']['y'] : 0;
+
+  if ($settings['enforce_minimum'] && 
+      (!is_numeric($rw) || intval($rw) != $rw || $rw <= 0 ||
+       !is_numeric($rh) || intval($rh) != $rh || $rh <= 0)) {
+    form_error($element, t('Target resolution must be defined as WIDTH_HEIGHT if minimum is to be enforced.'));
+  }
+}
+
 
 function _imagefield_crop_widget_croparea_validate($element, &$form_state) {
   //dpm(__FUNCTION__);
@@ -197,13 +218,18 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
             'id' => $element['#id'] . '-cropbox'))),
     );
     $element['cropinfo'] = _imagefield_add_cropinfo_fields($element['#file']->fid);
-    list($w, $h) = explode('x', $widget_settings['croparea']);
+    list($res_w, $res_h) = explode('x', $widget_settings['resolution']);
+    list($crop_w, $crop_h) = explode('x', $widget_settings['croparea']);
     $settings = array(
       $element['#id'] => array(
         'box' => array(
-          'ratio' => $h ? $widget_settings['enforce_ratio'] * $w/$h : 0,
-          'box_width' => $w,
-          'box_height' => $h,
+          'ratio' => $res_h ? $widget_settings['enforce_ratio'] * $res_w/$res_h : 0,
+          'box_width' => $crop_w,
+          'box_height' => $crop_h,
+        ),
+        'minimum' => array(
+          'width'   => $widget_settings['enforce_minimum'] ? $crop_w : NULL,
+          'height'  => $widget_settings['enforce_minimum'] ? $crop_h : NULL,
         ),
         //'preview' => $preview_js,
       ),
