@@ -220,6 +220,7 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
     $element['cropinfo'] = _imagefield_add_cropinfo_fields($element['#file']->fid);
     list($res_w, $res_h) = explode('x', $widget_settings['resolution']);
     list($crop_w, $crop_h) = explode('x', $widget_settings['croparea']);
+    dpm(array('crop_w' => $crop_w, 'crop_h' => $crop_h));
     $settings = array(
       $element['#id'] => array(
         'box' => array(
@@ -228,8 +229,8 @@ function imagefield_crop_widget_process($element, &$form_state, $form) {
           'box_height' => $crop_h,
         ),
         'minimum' => array(
-          'width'   => $widget_settings['enforce_minimum'] ? $crop_w : NULL,
-          'height'  => $widget_settings['enforce_minimum'] ? $crop_h : NULL,
+          'width'   => $widget_settings['enforce_minimum'] ? $res_w : NULL,
+          'height'  => $widget_settings['enforce_minimum'] ? $res_h : NULL,
         ),
         //'preview' => $preview_js,
       ),
