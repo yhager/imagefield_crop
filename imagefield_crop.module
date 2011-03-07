@@ -82,7 +82,7 @@ function imagefield_crop_field_widget_settings_form($field, $instance) {
   $form['enforce_minimum'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enforce minimum crop size based on the output size'),
-    '#default_value' => $settings['enforce_ratio'],
+    '#default_value' => $settings['enforce_minimum'],
     '#description' => t('Check this to force a minimum cropping selection equal to the output size. NOTE: If you leave this unchecked you might get zoomed pixels if the cropping area is smaller than the output resolution.'),
     '#element_validate' => array('_imagefield_crop_widget_enforce_minimum_validate'),
   );
