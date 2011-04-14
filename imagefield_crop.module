@@ -406,6 +406,7 @@ function theme_imagefield_crop_widget($variables) {
     $output .= drupal_render($element['cropbox']);
     $output .= '</div>';
   }
+  $output .= '</div>';
   $output .= drupal_render_children($element);
   return $output;
 }
